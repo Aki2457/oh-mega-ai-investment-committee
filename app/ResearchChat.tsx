@@ -17,6 +17,11 @@ function makeId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function apiPath(path: string) {
+  if (typeof window !== "undefined" && window.location.hostname.endsWith("chatgpt.site")) return `/api/backend${path}`;
+  return path;
+}
+
 const profiles = {
   flash: { label: "Flash", detail: "Fast · free 20B", description: "GPT-OSS 20B handles research, Risk, and the CIO call." },
   think: { label: "Think", detail: "Fusion · free models", description: "GPT-OSS 20B quantitative research with GPT-OSS 120B macro and CIO judgment." },
@@ -135,12 +140,12 @@ export function ResearchChat() {
 
   async function refresh() {
     const [statusResult, universeResult, historyResult, portfolioResult, riskResult, weatherResult] = await Promise.all([
-      fetch("/api/status", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/universe", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/committee/history", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/portfolio", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/risk", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/weather", { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/status"), { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/universe"), { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/committee/history"), { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/portfolio"), { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/risk"), { cache: "no-store" }).then((response) => response.json()),
+      fetch(apiPath("/api/weather"), { cache: "no-store" }).then((response) => response.json()),
     ]) as [Record<string, unknown>, { universe?: UniverseItem[] }, { runs?: Array<Record<string, unknown>> }, Record<string, Array<Record<string, unknown>>>, Record<string, unknown>, Record<string, unknown>];
     setStatus(statusResult);
     setUniverse(universeResult.universe ?? []);
@@ -184,20 +189,20 @@ export function ResearchChat() {
 
   async function addMod(event: FormEvent) {
     event.preventDefault(); setError("");
-    const response = await fetch("/api/weather", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: modType, value: modType === "halt" ? "true" : modValue, ticker: modTicker, note: modNote }) });
+    const response = await fetch(apiPath("/api/weather"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: modType, value: modType === "halt" ? "true" : modValue, ticker: modTicker, note: modNote }) });
     const result = await response.json();
     if (!response.ok) { setError(String(result.error ?? "Unable to add modification")); return; }
     setModNote(""); setModTicker(""); await refresh();
   }
 
   async function removeMod(id: string) {
-    await fetch(`/api/weather?id=${encodeURIComponent(id)}`, { method: "DELETE" }); await refresh();
+    await fetch(apiPath(`/api/weather?id=${encodeURIComponent(id)}`), { method: "DELETE" }); await refresh();
   }
 
   async function runNow() {
     setRunning(true); setError(""); setStages([]);
     try {
-      const response = await fetch("/api/committee/run", {
+      const response = await fetch(apiPath("/api/committee/run"), {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trigger: "manual", profile }),
       });
       await readSse(response, (value) => setStages((current) => [...current, value as Stage]));
@@ -215,7 +220,7 @@ export function ResearchChat() {
     const responseId = makeId();
     setMessages((current) => [...current, userMessage, { id: responseId, role: "assistant", text: "" }]);
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(apiPath("/api/chat"), {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, agent, profile, message: text }),
       });
       await readSse(response, (value) => {
@@ -231,19 +236,19 @@ export function ResearchChat() {
 
   async function addTicker(event: FormEvent) {
     event.preventDefault(); setError("");
-    const response = await fetch("/api/universe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: newTicker, region: newRegion }) });
+    const response = await fetch(apiPath("/api/universe"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: newTicker, region: newRegion }) });
     const payload = await response.json() as { error?: string };
     if (!response.ok) return setError(payload.error ?? "Unable to add ticker");
     setNewTicker(""); await refresh();
   }
 
   async function changeTicker(ticker: string, statusValue: string) {
-    await fetch("/api/universe", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, status: statusValue }) });
+    await fetch(apiPath("/api/universe"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, status: statusValue }) });
     await refresh();
   }
 
   async function removeTicker(ticker: string) {
-    await fetch(`/api/universe?ticker=${encodeURIComponent(ticker)}`, { method: "DELETE" });
+    await fetch(apiPath(`/api/universe?ticker=${encodeURIComponent(ticker)}`), { method: "DELETE" });
     await refresh();
   }
 
