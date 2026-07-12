@@ -54,9 +54,11 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .primary-bar { min-height: 58px; padding: 7px clamp(18px,3vw,42px); border-bottom: 1px solid var(--line); background: rgba(255,255,255,.97); display: flex; align-items: center; justify-content: center; gap: 12px; position: sticky; top: 82px; z-index: 19; }
 .primary-bar > div { display: flex; gap: 5px; }
 .primary-bar button, .primary-bar summary { min-height: 42px; border: 0; border-radius: 10px; padding: 9px 15px; background: transparent; color: var(--muted); font-weight: 700; }
+.primary-bar button, .primary-bar summary, .primary-action, .panel, .weather-strip { transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease; }
 .primary-bar button { display: flex; align-items: center; gap: 7px; }
 .primary-bar button i { width: 23px; height: 23px; border-radius: 7px; background: #f0f4f5; display: grid; place-items: center; color: var(--navy); font-style: normal; }
 .primary-bar button.active { background: #e8f8ef; color: #0d5c38; }
+.primary-bar button:hover, .primary-bar summary:hover { background: #f0f6f3; color: var(--navy); transform: translateY(-1px); }
 .primary-bar button.active i { background: var(--green); }
 .advanced-menu { position: relative; }
 .advanced-menu summary { cursor: pointer; list-style: none; display: grid; place-items: center; background: #f3f6f7; }
@@ -90,6 +92,7 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .simulation-label { margin: auto 0 0; padding-top: 15px; border-top: 1px solid #cbd6de; color: #8a5960; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
 
 .content { width: min(1440px,100%); min-width: 0; margin: 0 auto; padding: 0 clamp(22px, 3.5vw, 48px) clamp(36px, 5vw, 64px); position: relative; }
+.content > * { animation: content-enter .38s cubic-bezier(.2,.7,.2,1) both; }
 .page-context { min-height: 54px; margin: 0 0 22px; border-bottom: 1px solid var(--line); background: transparent; display: flex; align-items: center; gap: 9px; }
 .page-context span { color: var(--green-dark); font-size: 10px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
 .page-context span::after { content: "/"; margin-left: 9px; color: #a9b5bd; }
@@ -108,6 +111,7 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .setup-warning { margin-bottom: 18px; padding: 13px 15px; border-left: 4px solid var(--amber); background: #fff4d9; display: grid; gap: 3px; }
 .setup-warning span { color: #765e28; font-size: 13px; }
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: 0 5px 18px rgba(7,26,44,.035); }
+.panel:hover { border-color: #c8d9d0; box-shadow: 0 10px 28px rgba(7,26,44,.065); }
 .panel h3, .panel h4 { margin: 0; }
 .panel h4 { margin-top: 18px; font-size: 13px; }
 .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
@@ -142,6 +146,7 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .decision-cockpit .hero-actions span { color: var(--muted); }
 .allocation-visual { display: grid; justify-items: center; gap: 15px; }
 .allocation-donut { width: 172px; height: 172px; aspect-ratio: 1; padding: 15px; border-radius: 50%; box-shadow: 0 10px 28px rgba(7,26,44,.1); }
+.allocation-donut { animation: allocation-arrive .65s cubic-bezier(.2,.8,.2,1) both; }
 .allocation-donut > div { width: 100%; height: 100%; border-radius: 50%; background: white; color: var(--navy); display: grid; place-content: center; justify-items: center; }
 .allocation-donut strong { font-size: 32px; font-weight: 520; letter-spacing: -.04em; }
 .allocation-donut span { margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
@@ -159,6 +164,7 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .probability-row small { color: var(--muted); font-size: 9px; }
 .probability-track { height: 7px; overflow: hidden; border-radius: 999px; background: #e5ecef; }
 .probability-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #24aa68, var(--green)); }
+.probability-track i { transform-origin: left; animation: bar-grow .7s cubic-bezier(.2,.8,.2,1) both; }
 .data-stamp { padding-top: 13px; border-top: 1px solid var(--line); display: grid; gap: 3px; }
 .data-stamp span { color: var(--green-dark); font-size: 9px; font-weight: 750; letter-spacing: .12em; }
 .data-stamp strong { font-size: 13px; }
@@ -224,6 +230,7 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .stage-panel ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 7px; }
 .stage-panel li { padding: 10px; border: 1px solid var(--line); border-radius: 9px; display: flex; gap: 9px; opacity: .65; }
 .stage-panel li.active { border-color: var(--green-dark); opacity: 1; }
+.stage-panel li.active { animation: stage-pulse 1.8s ease-in-out infinite; }
 .stage-panel li b { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #e6edf1; font-size: 10px; }
 .stage-panel li div { display: grid; gap: 3px; }
 .stage-panel li strong { text-transform: capitalize; font-size: 11px; }
@@ -313,6 +320,7 @@ td { font-size: 12px; line-height: 1.4; }
 .weather-strip.weather-defense { border-color: #afc7d9; background: linear-gradient(110deg, #e6f0f7, #f8fafb); }
 .weather-strip.weather-lockdown { border-color: #293b49; background: linear-gradient(110deg, #142535, #263b4b); color: white; }
 .weather-symbol { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.7); display: grid; place-items: center; font-size: 28px; }
+.weather-symbol { animation: weather-breathe 3.2s ease-in-out infinite; }
 .weather-strip p { margin: 0; color: var(--green-dark); font-size: 9px; font-weight: 800; letter-spacing: .15em; }
 .weather-strip h2 { margin: 2px 0; font-size: 24px; }
 .weather-strip span { color: var(--muted); font-size: 11px; }
@@ -331,6 +339,7 @@ td { font-size: 12px; line-height: 1.4; }
 .guidance-note span { color: #476657; font-size: 12px; line-height: 1.55; }
 .mod-list { display: grid; gap: 9px; }
 .mod-list article { padding: 12px; border: 1px solid var(--line); border-radius: 10px; display: flex; justify-content: space-between; gap: 12px; }
+.mod-list article { animation: content-enter .3s ease both; }
 .mod-list article > div { display: grid; gap: 3px; }
 .mod-list span { color: var(--green-dark); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .mod-list small { color: var(--muted); }
@@ -345,6 +354,27 @@ td { font-size: 12px; line-height: 1.4; }
 .error-toast { position: fixed; right: 22px; bottom: 22px; z-index: 10; width: min(420px, calc(100% - 44px)); padding: 14px; border-radius: 12px; background: var(--red); color: white; display: grid; gap: 5px; box-shadow: 0 14px 35px rgba(7,26,44,.25); }
 .error-toast span { font-size: 12px; line-height: 1.4; }
 .error-toast button { justify-self: end; border: 0; background: transparent; color: white; text-decoration: underline; }
+
+@keyframes content-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes allocation-arrive {
+  from { opacity: 0; transform: scale(.9) rotate(-8deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes weather-breathe {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(50,210,127,0); }
+  50% { transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 18px rgba(50,210,127,.14); }
+}
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(50,210,127,0); }
+  50% { box-shadow: 0 0 0 4px rgba(50,210,127,.12); }
+}
 
 @media (max-width: 1100px) {
   .topbar { grid-template-columns: auto 1fr; }
@@ -443,5 +473,5 @@ td { font-size: 12px; line-height: 1.4; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { scroll-behavior: auto !important; transition: none !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
