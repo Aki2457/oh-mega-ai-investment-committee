@@ -21,6 +21,13 @@ button, input, select { font: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 .app-shell { min-height: 100vh; }
+.skip-link { position: fixed; left: 12px; top: 8px; z-index: 100; padding: 10px 14px; border-radius: 8px; background: white; color: var(--navy); font-weight: 700; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
+button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; outline-offset: 2px; }
+@supports selector(:focus-visible) {
+  button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #f2c45f; outline-offset: 2px; }
+}
 .eyebrow { margin: 0 0 5px; color: var(--green-dark); letter-spacing: .15em; font-size: 11px; font-weight: 700; }
 
 .topbar {
@@ -33,7 +40,7 @@ a { color: inherit; }
 .brand-lockup h1 { margin: 0; font-size: 18px; font-weight: 500; white-space: nowrap; }
 .omega { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: var(--navy); font: 500 30px Georgia, serif; }
 .profile-picker { justify-self: center; display: flex; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.07); }
-.profile-picker button { min-width: 112px; padding: 7px 13px; border: 0; border-radius: 9px; background: transparent; color: #aebfcb; display: grid; gap: 1px; text-align: left; }
+.profile-picker button { min-width: 112px; min-height: 44px; padding: 7px 13px; border: 0; border-radius: 9px; background: transparent; color: #aebfcb; display: grid; gap: 1px; text-align: left; }
 .profile-picker button strong { font-size: 13px; }
 .profile-picker button span { font-size: 10px; }
 .profile-picker button.active { background: var(--green); color: var(--navy); }
@@ -46,7 +53,7 @@ a { color: inherit; }
 .sidebar nav { display: grid; gap: 18px; }
 .nav-group { display: grid; gap: 4px; }
 .nav-group > span { padding: 0 11px 5px; color: #7b8b97; font-size: 9px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
-.sidebar nav button { border: 0; border-radius: 10px; padding: 10px 11px; background: transparent; color: #4e6272; display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 7px; text-align: left; }
+.sidebar nav button { min-height: 44px; border: 0; border-radius: 10px; padding: 10px 11px; background: transparent; color: #4e6272; display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 7px; text-align: left; }
 .sidebar nav button i { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; background: rgba(7,26,44,.06); font-style: normal; font-weight: 700; }
 .sidebar nav button em { font-style: normal; font-size: 12px; font-weight: 600; }
 .sidebar nav button:hover { background: rgba(255,255,255,.75); color: var(--navy); }
@@ -106,7 +113,7 @@ a { color: inherit; }
 .decision-cockpit .hero-actions { margin-top: 22px; justify-items: start; }
 .decision-cockpit .hero-actions span { color: #9db1bf; }
 .allocation-visual { display: grid; justify-items: center; gap: 15px; }
-.allocation-donut { width: 172px; aspect-ratio: 1; padding: 15px; border-radius: 50%; box-shadow: 0 15px 35px rgba(0,0,0,.15); }
+.allocation-donut { width: 172px; height: 172px; aspect-ratio: 1; padding: 15px; border-radius: 50%; box-shadow: 0 15px 35px rgba(0,0,0,.15); }
 .allocation-donut > div { width: 100%; height: 100%; border-radius: 50%; background: var(--navy); display: grid; place-content: center; justify-items: center; }
 .allocation-donut strong { font-size: 32px; font-weight: 520; letter-spacing: -.04em; }
 .allocation-donut span { margin-top: 2px; color: #9fb4c4; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
@@ -248,7 +255,10 @@ td { font-size: 12px; line-height: 1.4; }
 .workflow-track { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
 .workflow-step { position: relative; min-height: 210px; padding: 18px 16px; border: 1px solid var(--line); border-top: 4px solid var(--workflow-color, var(--green)); border-radius: 14px; background: var(--card); }
 .workflow-step-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.workflow-step-head b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--workflow-color, var(--green)) 16%, transparent); color: var(--navy); }
+.workflow-step-head b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #e4ecef; color: var(--navy); }
+@supports (background: color-mix(in srgb, white, black)) {
+  .workflow-step-head b { background: color-mix(in srgb, var(--workflow-color, var(--green)) 16%, transparent); }
+}
 .workflow-step h3 { margin: 24px 0 10px; font-size: 18px; }
 .workflow-step p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .workflow-arrow { display: none; }
@@ -341,6 +351,11 @@ td { font-size: 12px; line-height: 1.4; }
   .decision-cockpit .allocation-visual { justify-items: center; }
   .decision-cockpit .data-stamp { grid-column: auto; }
   .portfolio-overview { grid-template-columns: 1fr; }
+}
+
+@media (prefers-contrast: more) {
+  :root { --muted: #405463; --line: #9eacb6; }
+  .panel, .summary-grid article, .metric-grid article { box-shadow: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

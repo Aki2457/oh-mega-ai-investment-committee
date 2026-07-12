@@ -12,6 +12,11 @@ type Message = { id: string; role: "user" | "assistant"; text: string; citations
 type UniverseItem = { id: string; ticker: string; region: "US" | "China/HK"; status: string; source: string; thesis: string; citations: Citation[] };
 type Stage = { stage: string; message: string; data?: Record<string, unknown> };
 
+function makeId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 const profiles = {
   flash: { label: "Flash", detail: "Fast · free 20B", description: "GPT-OSS 20B handles research, Risk, and the CIO call." },
   think: { label: "Think", detail: "Fusion · free models", description: "GPT-OSS 20B quantitative research with GPT-OSS 120B macro and CIO judgment." },
@@ -115,7 +120,7 @@ export function ResearchChat() {
     { id: "welcome", role: "assistant", text: "Select an agent and ask a question. Every live answer requires real Yahoo data, and current questions can use web search." },
   ]);
   const [chatting, setChatting] = useState(false);
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId] = useState(makeId);
   const [newTicker, setNewTicker] = useState("");
   const [newRegion, setNewRegion] = useState<"US" | "China/HK">("US");
 
@@ -147,7 +152,7 @@ export function ResearchChat() {
   const citations = (latestFinal.citations ?? []) as Citation[];
   const analystScores = (latestFinal.analystScores ?? []) as Array<Record<string, unknown>>;
   const nav = portfolio.nav ?? [];
-  const currentNav = nav.length ? Number(nav.at(-1)?.nav ?? 100) : 100;
+  const currentNav = nav.length ? Number(nav[nav.length - 1]?.nav ?? 100) : 100;
   const riskMetrics = (risk.metrics ?? {}) as Record<string, unknown>;
   const riskBaseline = (risk.baseline ?? {}) as Record<string, unknown>;
   const latestRiskReview = (risk.latestRisk ?? {}) as Record<string, unknown>;
@@ -181,8 +186,8 @@ export function ResearchChat() {
     const text = input.trim();
     if (!text || chatting) return;
     setInput(""); setChatting(true); setError("");
-    const userMessage: Message = { id: crypto.randomUUID(), role: "user", text };
-    const responseId = crypto.randomUUID();
+    const userMessage: Message = { id: makeId(), role: "user", text };
+    const responseId = makeId();
     setMessages((current) => [...current, userMessage, { id: responseId, role: "assistant", text: "" }]);
     try {
       const response = await fetch("/api/chat", {
@@ -244,7 +249,7 @@ export function ResearchChat() {
           <h4>Sources</h4><Sources citations={citations} />
         </aside>
       </div>
-      {!!stages.length && <section className="panel stage-panel"><div className="panel-head"><h3>Run stages</h3><span>{stages.at(-1)?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
+      {!!stages.length && <section className="panel stage-panel" aria-live="polite"><div className="panel-head"><h3>Run stages</h3><span>{stages[stages.length - 1]?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
     </>;
   }
 
@@ -279,7 +284,7 @@ export function ResearchChat() {
       <section className="portfolio-overview panel"><AllocationDonut stockPct={Number(latestDecision?.stockPct ?? 0)} cashPct={Number(latestDecision?.cashPct ?? 100)} label={String(latestDecision?.mode ?? "Cash")} /><div className="portfolio-brief"><span>Current mandate</span><h3>{String(latestDecision?.mode ?? "Cash protection")}</h3><p>{positions.length ? `${positions.length} approved holdings are active in the simulated portfolio.` : approvedCount ? `${approvedCount} stocks are approved. Run the committee to create the first controlled allocation.` : "Approve eligible stocks in Universe, then create the first allocation."}</p><div><b>US sleeve {Number(latestDecision?.usSleevePct ?? 0).toFixed(0)}%</b><b>China/HK sleeve {Number(latestDecision?.chinaSleevePct ?? 0).toFixed(0)}%</b></div></div></section>
       <div className="summary-grid"><article><span>Current NAV</span><strong>${currentNav.toFixed(2)}</strong></article><article><span>Mode</span><strong>{String(latestDecision?.mode ?? "Cash")}</strong></article><article><span>Stock weight</span><strong>{Number(latestDecision?.stockPct ?? 0).toFixed(1)}%</strong></article><article><span>Cash weight</span><strong>{Number(latestDecision?.cashPct ?? 100).toFixed(1)}%</strong></article></div>
       <section className="panel table-panel"><table><thead><tr><th>Ticker</th><th>Market</th><th>Weight</th><th>Allocation</th><th>Reference price</th></tr></thead><tbody>{positions.map((position) => <tr key={String(position.ticker)}><td><strong>{String(position.ticker)}</strong></td><td>{String(position.region)}</td><td>{Number(position.weightPct).toFixed(2)}%</td><td><div className="weight-bar"><i style={{ width: `${Math.min(100, Number(position.weightPct) * 10)}%` }} /></div></td><td>${Number(position.lastPrice ?? 0).toFixed(2)}</td></tr>)}</tbody></table>{!positions.length && <p className="empty-copy table-empty">The portfolio is 100% cash until the Investment Committee allocates approved securities.</p>}</section>
-      {!!stages.length && <section className="panel stage-panel"><div className="panel-head"><h3>Allocation progress</h3><span>{stages.at(-1)?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
+      {!!stages.length && <section className="panel stage-panel" aria-live="polite"><div className="panel-head"><h3>Allocation progress</h3><span>{stages[stages.length - 1]?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
     </>;
   }
 
@@ -306,8 +311,9 @@ export function ResearchChat() {
   const content = view === "committee" ? CommitteeView() : view === "workflow" ? WorkflowView() : view === "universe" ? UniverseView() : view === "portfolio" ? PortfolioView() : view === "decisions" ? DecisionsView() : view === "performance" ? PerformanceView() : RiskView();
 
   return <main className="app-shell">
-    <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="profile-picker" aria-label="Model profile">{(Object.keys(profiles) as Profile[]).map((key) => <button className={profile === key ? "active" : ""} onClick={() => setProfile(key)} key={key}><strong>{profiles[key].label}</strong><span>{profiles[key].detail}</span></button>)}</div><div className="live-state"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span></div></header>
-    <div className="app-grid"><aside className="sidebar"><nav>{(["Decide", "Manage", "Review"] as const).map((group) => <div className="nav-group" key={group}><span>{group}</span>{views.filter((item) => item.group === group).map((item) => <button className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><em>{item.shortLabel}</em>{item.id === "universe" && pendingCount > 0 && <b>{pendingCount}</b>}</button>)}</div>)}</nav><div className="profile-note"><span>Active intelligence profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div className="system-check"><span><i className={status.openRouter ? "ok" : ""} />AI committee</span><span><i className={status.yahoo ? "ok" : ""} />Market data {stockProviderCount}/4</span><span><i className={status.persistence ? "ok" : ""} />Decision history</span><span><i className={status.scheduler ? "ok" : ""} />Weekly automation</span></div><p className="simulation-label">SIMULATED PORTFOLIO ONLY</p></aside>
-      <section className="content"><div className="page-context"><span>{currentView.group}</span><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div>{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
+    <a className="skip-link" href="#main-content">Skip to main content</a>
+    <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="profile-picker" aria-label="Model profile">{(Object.keys(profiles) as Profile[]).map((key) => <button className={profile === key ? "active" : ""} aria-pressed={profile === key} onClick={() => setProfile(key)} key={key}><strong>{profiles[key].label}</strong><span>{profiles[key].detail}</span></button>)}</div><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span></div></header>
+    <div className="app-grid"><aside className="sidebar"><nav aria-label="Primary navigation">{(["Decide", "Manage", "Review"] as const).map((group) => <div className="nav-group" key={group}><span>{group}</span>{views.filter((item) => item.group === group).map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><em>{item.shortLabel}</em>{item.id === "universe" && pendingCount > 0 && <b aria-label={`${pendingCount} pending`}>{pendingCount}</b>}</button>)}</div>)}</nav><div className="profile-note"><span>Active intelligence profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div className="system-check"><span><i className={status.openRouter ? "ok" : ""} />AI committee</span><span><i className={status.yahoo ? "ok" : ""} />Market data {stockProviderCount}/4</span><span><i className={status.persistence ? "ok" : ""} />Decision history</span><span><i className={status.scheduler ? "ok" : ""} />Weekly automation</span></div><p className="simulation-label">SIMULATED PORTFOLIO ONLY</p></aside>
+      <section className="content" id="main-content" tabIndex={-1}><div className="page-context"><span>{currentView.group}</span><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div>{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }
