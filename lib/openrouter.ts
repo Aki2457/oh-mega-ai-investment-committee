@@ -2,7 +2,7 @@ import type { AnalystOpinion, Citation, FinalDecision, MarketPack, Profile, Risk
 import Ajv from "ajv";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 45_000);
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 25_000);
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validators = new WeakMap<object, ReturnType<typeof ajv.compile>>();
 

@@ -109,7 +109,6 @@ export function ResearchChat() {
   const [risk, setRisk] = useState<Record<string, unknown>>({ metrics: {}, baseline: {}, controls: {} });
   const [stages, setStages] = useState<Stage[]>([]);
   const [running, setRunning] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -136,8 +135,7 @@ export function ResearchChat() {
   }
 
   useEffect(() => {
-    refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load the committee"))
-      .finally(() => setLoading(false));
+    refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load the committee"));
   }, []);
 
   const latestRun = runs[0] ?? null;
@@ -310,6 +308,6 @@ export function ResearchChat() {
   return <main className="app-shell">
     <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="profile-picker" aria-label="Model profile">{(Object.keys(profiles) as Profile[]).map((key) => <button className={profile === key ? "active" : ""} onClick={() => setProfile(key)} key={key}><strong>{profiles[key].label}</strong><span>{profiles[key].detail}</span></button>)}</div><div className="live-state"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span></div></header>
     <div className="app-grid"><aside className="sidebar"><nav>{(["Decide", "Manage", "Review"] as const).map((group) => <div className="nav-group" key={group}><span>{group}</span>{views.filter((item) => item.group === group).map((item) => <button className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><em>{item.shortLabel}</em>{item.id === "universe" && pendingCount > 0 && <b>{pendingCount}</b>}</button>)}</div>)}</nav><div className="profile-note"><span>Active intelligence profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div className="system-check"><span><i className={status.openRouter ? "ok" : ""} />AI committee</span><span><i className={status.yahoo ? "ok" : ""} />Market data {stockProviderCount}/4</span><span><i className={status.persistence ? "ok" : ""} />Decision history</span><span><i className={status.scheduler ? "ok" : ""} />Weekly automation</span></div><p className="simulation-label">SIMULATED PORTFOLIO ONLY</p></aside>
-      <section className="content"><div className="page-context"><span>{currentView.group}</span><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Setup required"}</small></div>{loading ? <div className="loading-state">Loading the committee...</div> : content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
+      <section className="content"><div className="page-context"><span>{currentView.group}</span><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div>{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }
