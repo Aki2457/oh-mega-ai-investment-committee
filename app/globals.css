@@ -66,6 +66,19 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .advanced-menu > div { min-width: 180px; padding: 7px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 14px 35px rgba(7,26,44,.12); display: grid; position: absolute; right: 0; top: 48px; }
 .advanced-menu button { width: 100%; justify-content: space-between; text-align: left; }
 .advanced-menu b { min-width: 20px; height: 20px; border-radius: 50%; background: var(--amber); color: var(--navy); display: grid; place-items: center; font-size: 10px; }
+.quick-dock { min-height: 54px; padding: 5px clamp(18px,3vw,42px); border-bottom: 1px solid #c7d8d0; background: #edf8f2; display: flex; justify-content: center; gap: 5px; position: sticky; top: 140px; z-index: 18; box-shadow: 0 6px 14px rgba(7,26,44,.06); }
+.quick-dock button { min-width: 110px; min-height: 42px; padding: 6px 10px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #315447; display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 750; }
+.quick-dock button:hover { border-color: #9cc8b2; background: white; color: var(--navy); }
+.quick-dock i { width: 23px; height: 23px; border-radius: 7px; background: white; display: grid; place-items: center; color: var(--green-dark); font-style: normal; }
+.next-step-card { margin: 18px 0 10px; padding: 14px 16px; border: 2px solid #177a4c; border-radius: 14px; background: linear-gradient(105deg,#e2faed,#f8fffb); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; box-shadow: 0 8px 20px rgba(23,122,76,.1); }
+.next-step-number { padding: 7px 9px; border-radius: 8px; background: var(--green-dark); color: white; font-size: 9px; font-weight: 900; letter-spacing: .1em; }
+.next-step-card > div:nth-child(2) { display: grid; gap: 2px; }
+.next-step-card span { color: var(--green-dark); font-size: 8px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.next-step-card strong { color: var(--navy); font-size: 16px; }
+.next-step-card small { color: #526c60; font-size: 10px; line-height: 1.4; }
+.next-step-card > button { min-height: 42px; padding: 9px 15px; border: 0; border-radius: 9px; background: var(--green); color: var(--navy); font-weight: 850; }
+.next-step-card > button:hover:not(:disabled) { background: #42e18f; transform: translateY(-1px); }
+.next-step-card > button:disabled { opacity: .5; }
 
 .app-grid { min-height: calc(100vh - 140px); display: grid; grid-template-columns: minmax(0, 1fr); }
 .sidebar { padding: 22px 14px; background: white; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; position: sticky; top: 82px; height: calc(100vh - 82px); overflow-y: auto; }
@@ -613,6 +626,10 @@ td { font-size: 12px; line-height: 1.4; }
   .primary-bar button { padding: 8px 11px; }
   .advanced-menu { flex: 0 0 auto; }
   .advanced-menu > div { position: fixed; top: 210px; right: 10px; }
+  .quick-dock { top: 204px; justify-content: flex-start; overflow-x: auto; padding: 5px 10px; }
+  .quick-dock button { min-width: 94px; flex: 0 0 auto; }
+  .next-step-card { grid-template-columns: auto 1fr; }
+  .next-step-card > button { grid-column: 1 / 3; width: 100%; }
   .app-grid { grid-template-columns: 1fr; }
   .sidebar { position: sticky; top: 146px; z-index: 15; width: 100%; height: auto; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
   .sidebar nav { display: flex; gap: 5px; align-items: center; }
@@ -672,6 +689,9 @@ td { font-size: 12px; line-height: 1.4; }
   .primary-bar { top: 139px; }
   .primary-bar button i { display: none; }
   .primary-bar button span { white-space: nowrap; }
+  .quick-dock { top: 197px; }
+  .quick-dock button { min-width: 78px; padding: 5px 7px; display: grid; justify-items: center; gap: 2px; font-size: 9px; }
+  .next-step-card { margin-top: 12px; }
   .page-context small { display: none; }
   .sidebar nav { display: flex; overflow-x: auto; }
   .sidebar nav button { flex: 0 0 auto; }
