@@ -40,8 +40,8 @@ const views: Array<{ id: View; label: string; shortLabel: string; icon: string; 
   { id: "risk", label: "Risk Review", shortLabel: "Risk", icon: "!", group: "Review" },
 ];
 
-const primaryNavigation = views.filter((item) => ["committee", "portfolio", "weather", "workflow"].includes(item.id));
-const advancedNavigation = views.filter((item) => ["universe", "decisions", "performance", "risk"].includes(item.id));
+const primaryNavigation = views.filter((item) => ["committee", "weather", "portfolio", "performance"].includes(item.id));
+const advancedNavigation = views.filter((item) => ["workflow", "risk", "universe", "decisions"].includes(item.id));
 
 const agents: Array<{ id: Agent; label: string }> = [
   { id: "research", label: "Research" },
@@ -191,6 +191,13 @@ export function ResearchChat() {
   const setupReady = Boolean(status.openRouter && status.yahoo && status.persistence);
   const weatherMode = String(weather.mode ?? "Balanced");
   const activeMods = ((weather.modifications ?? []) as Array<Record<string, unknown>>).filter((item) => item.active);
+  const navigationLabels: Partial<Record<View, string>> = { committee: "House", weather: "Current Position", portfolio: "Portfolio", performance: "Results" };
+
+  function goToHouse(target?: "chat") {
+    setView("committee");
+    if (target === "chat") window.setTimeout(() => document.getElementById("agent-chat")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    else window.setTimeout(() => document.getElementById("main-content")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
 
   async function addMod(event: FormEvent) {
     event.preventDefault(); setError("");
@@ -415,7 +422,7 @@ export function ResearchChat() {
   return <main className="app-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><label className="profile-picker"><span>AI depth</span><select value={profile} onChange={(event) => setProfile(event.target.value as Profile)}><option value="flash">Flash · fastest</option><option value="think">Think · standard</option><option value="pro">Pro · deepest</option></select></label><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span><b>SIMULATED</b></div></header>
-    <nav className="primary-bar" aria-label="Primary navigation"><div>{primaryNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><span>{item.id === "committee" ? "Home" : item.shortLabel}</span></button>)}</div><details className="advanced-menu" open={advancedNavigation.some((item) => item.id === view)}><summary>More</summary><div>{advancedNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><span>{item.shortLabel}</span>{item.id === "universe" && pendingCount > 0 && <b aria-label={`${pendingCount} pending`}>{pendingCount}</b>}</button>)}</div></details></nav>
-    <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}><div className="page-context"><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div><CommitteePet />{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
+    <nav className="primary-bar" aria-label="Primary navigation"><div>{primaryNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => item.id === "committee" ? goToHouse() : setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><span>{navigationLabels[item.id]}</span></button>)}<button className={view === "committee" ? "" : "ask-nav"} onClick={() => goToHouse("chat")}><i aria-hidden="true">?</i><span>Ask Agents</span></button></div><details className="advanced-menu" open={advancedNavigation.some((item) => item.id === view)}><summary>All areas</summary><div>{advancedNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><span>{item.shortLabel}</span>{item.id === "universe" && pendingCount > 0 && <b aria-label={`${pendingCount} pending`}>{pendingCount}</b>}</button>)}</div></details></nav>
+    <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}><div className="page-context">{view !== "committee" && <button className="back-house" onClick={() => goToHouse()}>← House</button>}<div><span>You are here</span><strong>{currentView.label}</strong></div><small>{setupReady ? "Live system" : "Connecting"}</small></div>{view !== "committee" && <div className="navigation-guide"><div><strong>{currentView.label}</strong><span>{view === "portfolio" ? "See what the simulated fund owns and how much cash it holds." : view === "weather" ? "See the current gear, allocation limits, and active instructions." : view === "performance" ? "Review returns, volatility, drawdown, and prediction quality." : view === "risk" ? "Review challenges, hard controls, and improvement ideas." : view === "universe" ? "Approve the stocks the paper portfolio is allowed to hold." : view === "decisions" ? "Read the permanent record of past committee decisions." : "Follow how data moves through each agent and control."}</span></div><button onClick={() => goToHouse("chat")}>Ask an agent about this</button></div>}<CommitteePet />{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }
