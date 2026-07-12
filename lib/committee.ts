@@ -4,7 +4,7 @@ import {
 import { buildMarketPack } from "./market-data";
 import { buildProposal, forecastWeek } from "./allocation";
 import { judgeDecision, macroOpinion, profileModels, quantitativeOpinion, riskOpinion } from "./openrouter";
-import type { FinalDecision, MarketFeatures, MarketPack, Profile } from "./types";
+import type { AnalystOpinion, FinalDecision, MarketFeatures, MarketPack, Profile, RiskOpinion } from "./types";
 
 export type CommitteeStage = {
   stage: "starting" | "market-data" | "search" | "opinions" | "risk" | "judge" | "rebalance" | "complete" | "frozen" | "error";
@@ -18,6 +18,48 @@ function frozenDecision(pack: MarketPack): FinalDecision {
     usExpectedReturnPct: 0, chinaExpectedReturnPct: 0, usSleevePct: 50, chinaSleevePct: 50,
     rationale: "The committee froze the paper portfolio because market data exceeded the five-trading-day freshness limit.",
     riskOverrideRationale: "No override permitted during a data freeze.", analystScores: [], candidates: [], stockViews: [], citations: [],
+  };
+}
+
+function fallbackOpinion(pack: MarketPack, role: string, reason: string): AnalystOpinion {
+  const us = pack.features.find((feature) => feature.ticker === "QQQ");
+  const china = pack.features.find((feature) => feature.ticker === "3067.HK");
+  const probability = (feature?: MarketFeatures) => Math.max(0.2, Math.min(0.8, 0.5 + Number(feature?.return12w ?? 0) * 0.8 - Number(feature?.volatility60d ?? 0) * 0.08));
+  return {
+    role, model: "mechanical-fallback", mode: pack.mechanicalMode,
+    usUpProbability: probability(us), chinaUpProbability: probability(china),
+    usExpectedReturnPct: Number(us?.return4w ?? 0) * 25, chinaExpectedReturnPct: Number(china?.return4w ?? 0) * 25,
+    confidence: 0.35, catalysts: ["Price momentum and trend controls"], risks: [reason],
+    rationale: `The ${role} used the mechanical feature pack because the AI response could not be validated.`,
+    candidates: [], citations: [],
+    stockViews: pack.features.filter((feature) => pack.approvedTickers.some((item) => item.ticker === feature.ticker)).map((feature) => ({
+      ticker: feature.ticker, upProbability: probability(feature), expectedReturnPct: feature.return4w * 25, catalystScore: 0.5,
+    })),
+  };
+}
+
+function fallbackRisk(reason: string): RiskOpinion {
+  return {
+    opinion: "Support with conditions", confidence: 0.4,
+    concerns: [reason, "AI output requires a successful validated run before confidence can increase."],
+    conditions: ["Apply every hard allocation control and retain excess budget in cash."],
+    improvementExperiments: [
+      { objective: "Restore AI validation", test: "Retry the committee with a schema-compliant provider response.", successMeasure: "All agent JSON validates without fallback.", tradeoff: "May increase latency." },
+      { objective: "Limit volatility", test: "Compare inverse-volatility weights with the current score.", successMeasure: "Lower realized volatility without lower return.", tradeoff: "May reduce upside capture." },
+      { objective: "Improve diversification", test: "Add approved China/HK technology names.", successMeasure: "Both regional sleeves receive eligible allocations.", tradeoff: "Adds regional risk." },
+    ],
+    rationale: "Risk permits a simulated allocation at low confidence because code-level controls remain enforceable.",
+  };
+}
+
+function fallbackDecision(pack: MarketPack, opinion: AnalystOpinion, reason: string): FinalDecision {
+  return {
+    mode: pack.mechanicalMode, confidence: 0.35,
+    usUpProbability: opinion.usUpProbability, chinaUpProbability: opinion.chinaUpProbability,
+    usExpectedReturnPct: opinion.usExpectedReturnPct, chinaExpectedReturnPct: opinion.chinaExpectedReturnPct,
+    usSleevePct: 50, chinaSleevePct: 50,
+    rationale: `The CIO applied the ${pack.mechanicalMode} mechanical control after AI output validation failed. Hard limits remain active.`,
+    riskOverrideRationale: reason, analystScores: [], candidates: [], stockViews: opinion.stockViews, citations: [],
   };
 }
 
@@ -56,14 +98,20 @@ export async function runCommittee(input: {
       await input.emit?.({ stage: "search", message: "Searching current macro, policy, filing, and market evidence." });
       return macroOpinion(pack, profile);
     })();
-    const [quant, macro] = await Promise.all([quantPromise, macroPromise]);
+    const [quantResult, macroResult] = await Promise.allSettled([quantPromise, macroPromise]);
+    const quant = quantResult.status === "fulfilled" ? quantResult.value : fallbackOpinion(pack, "Quantitative Analyst", quantResult.reason instanceof Error ? quantResult.reason.message : "AI quantitative output failed validation");
+    const macro = macroResult.status === "fulfilled" ? macroResult.value : fallbackOpinion(pack, "News and Macro Analyst", macroResult.reason instanceof Error ? macroResult.reason.message : "AI macro output failed validation");
     const analystOpinions = [quant, ...(macro ? [macro] : [])];
     for (const opinion of analystOpinions) await saveOpinion(runId, opinion.role, opinion.model, opinion);
     await input.emit?.({ stage: "risk", message: "Running the independent Risk challenge." });
-    const risk = await riskOpinion(pack, analystOpinions, profile);
+    let risk: RiskOpinion;
+    try { risk = await riskOpinion(pack, analystOpinions, profile); }
+    catch (error) { risk = fallbackRisk(error instanceof Error ? error.message : "AI Risk output failed validation"); }
     await saveOpinion(runId, "Risk Agent", profileModels[profile].risk, risk);
     await input.emit?.({ stage: "judge", message: "Scoring evidence and making the CIO decision." });
-    const final = await judgeDecision(pack, analystOpinions, risk, profile);
+    let final: FinalDecision;
+    try { final = await judgeDecision(pack, analystOpinions, risk, profile); }
+    catch (error) { final = fallbackDecision(pack, quant, error instanceof Error ? error.message : "AI CIO output failed validation"); }
     const proposal = buildProposal(pack, final);
     await saveCandidates(final.candidates);
     await saveDecision(runId, final, proposal, risk);
