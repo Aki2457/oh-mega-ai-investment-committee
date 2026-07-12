@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-type Profile = "flash" | "think" | "pro";
+type Profile = "think";
 type Agent = "research" | "cio" | "risk";
 type View = "committee" | "weather" | "workflow" | "universe" | "portfolio" | "decisions" | "performance" | "risk";
 type HqRoom = "lounge" | "research" | "risk" | "cio" | "operations";
@@ -23,12 +23,6 @@ function apiPath(path: string) {
   return path;
 }
 
-const profiles = {
-  flash: { label: "Flash", detail: "Fast · free 20B", description: "GPT-OSS 20B handles research, Risk, and the CIO call." },
-  think: { label: "Think", detail: "Fusion · free models", description: "GPT-OSS 20B quantitative research with GPT-OSS 120B macro and CIO judgment." },
-  pro: { label: "Pro", detail: "Deep · free 120B", description: "Parallel research with GPT-OSS 120B Risk review and final CIO judgment." },
-} as const;
-
 const views: Array<{ id: View; label: string; shortLabel: string; icon: string; group: "Decide" | "Manage" | "Review" }> = [
   { id: "committee", label: "Investment Committee", shortLabel: "Committee", icon: "Ω", group: "Decide" },
   { id: "weather", label: "Fund Weather", shortLabel: "Weather", icon: "☀", group: "Decide" },
@@ -40,8 +34,6 @@ const views: Array<{ id: View; label: string; shortLabel: string; icon: string; 
   { id: "risk", label: "Risk Review", shortLabel: "Risk", icon: "!", group: "Review" },
 ];
 
-const primaryNavigation = views.filter((item) => ["committee", "weather", "portfolio", "performance"].includes(item.id));
-const advancedNavigation = views.filter((item) => ["workflow", "risk", "universe", "decisions"].includes(item.id));
 
 const agents: Array<{ id: Agent; label: string }> = [
   { id: "research", label: "Research" },
@@ -115,7 +107,7 @@ function MarkdownMessage({ text }: { text: string }) {
 
 export function ResearchChat() {
   const [view, setView] = useState<View>("committee");
-  const [profile, setProfile] = useState<Profile>("think");
+  const profile: Profile = "think";
   const [agent, setAgent] = useState<Agent>("research");
   const [hqRoom, setHqRoom] = useState<HqRoom>("lounge");
   const [selectedCharacter, setSelectedCharacter] = useState<Agent>("cio");
@@ -191,7 +183,6 @@ export function ResearchChat() {
   const setupReady = Boolean(status.openRouter && status.yahoo && status.persistence);
   const weatherMode = String(weather.mode ?? "Balanced");
   const activeMods = ((weather.modifications ?? []) as Array<Record<string, unknown>>).filter((item) => item.active);
-  const navigationLabels: Partial<Record<View, string>> = { committee: "House", weather: "Current Position", portfolio: "Portfolio", performance: "Results" };
 
   function goToHouse(target?: "chat") {
     setView("committee");
@@ -306,7 +297,7 @@ export function ResearchChat() {
       <LivingRoom />
       <WeatherStrip />
       <section className="decision-cockpit">
-        <div className="decision-copy"><div className="decision-label"><p className="eyebrow">NEXT-WEEK PAPER DECISION</p><ModeBadge mode={displayMode} /></div><h2>{latestFinal.mode ? `${displayMode} mode` : "Ready for the first committee"}</h2><p>{String(latestFinal.rationale ?? "Run the committee to combine live market data, cited research, independent Risk review, and a final CIO allocation.")}</p><div className="hero-actions"><button className="primary-action" onClick={runNow} disabled={running || !setupReady}>{running ? "Committee running" : "Run Investment Committee"}</button><span>Weekly scheduled decisions always use Pro</span></div></div>
+        <div className="decision-copy"><div className="decision-label"><p className="eyebrow">NEXT-WEEK PAPER DECISION</p><ModeBadge mode={displayMode} /></div><h2>{latestFinal.mode ? `${displayMode} mode` : "Ready for the first committee"}</h2><p>{String(latestFinal.rationale ?? "Run the committee to combine live market data, cited research, independent Risk review, and a final CIO allocation.")}</p><div className="hero-actions"><button className="primary-action" onClick={runNow} disabled={running || !setupReady}>{running ? "Committee running" : "Run Investment Committee"}</button><span>Manual and weekly decisions use Think Standard</span></div></div>
         <AllocationDonut stockPct={displayStockPct} cashPct={displayCashPct} label={displayMode} />
         <div className="probability-panel"><ProbabilityBar label="US technology" value={Number(latestFinal.usUpProbability ?? 0) * 100} detail={`Expected ${Number(latestFinal.usExpectedReturnPct ?? 0).toFixed(2)}% next week`} /><ProbabilityBar label="China / HK technology" value={Number(latestFinal.chinaUpProbability ?? 0) * 100} detail={`Expected ${Number(latestFinal.chinaExpectedReturnPct ?? 0).toFixed(2)}% next week`} /><div className="data-stamp"><span>DATA AS OF</span><strong>{String(latestRun?.dataAsOf ?? "Awaiting run")}</strong><small>{stockProviderCount}/4 market sources configured</small></div></div>
       </section>
@@ -393,14 +384,14 @@ export function ResearchChat() {
   function WorkflowView() {
     const workflowStages = [
       { number: "01", name: "Market Data", owner: "Data Engine", detail: "Yahoo prices, HKD conversion, freshness checks, and the quantitative feature pack.", tone: "data" },
-      { number: "02", name: "Research", owner: profile === "flash" ? "Research Agent" : "Quant + Macro Agents", detail: profile === "flash" ? "One fast GPT-OSS 20B market opinion." : "Parallel price analysis and cited news, policy, filing, earnings, and macro research.", tone: "research" },
+      { number: "02", name: "Research", owner: "Quant + Macro Agents", detail: "Parallel price analysis and cited news, policy, filing, earnings, and macro research.", tone: "research" },
       { number: "03", name: "Challenge", owner: "Risk Agent", detail: "Independent review of freshness, disagreement, liquidity, concentration, volatility, drawdown, and source quality.", tone: "risk" },
       { number: "04", name: "Decision", owner: "CIO Agent", detail: "Scores every opinion, resolves disagreements, and chooses Attack, Balanced, Defense, or Lockdown.", tone: "cio" },
       { number: "05", name: "Controls", owner: "Allocation Engine", detail: "Applies fixed mode weights, regional bounds, approved-universe rules, and the 10% security cap.", tone: "control" },
       { number: "06", name: "Paper Action", owner: "Portfolio Engine", detail: "Records a simulated rebalance, unused stock budget as cash, transactions, and NAV history.", tone: "portfolio" },
     ];
     return <><section className="section-title workflow-title"><p className="eyebrow">FROM EVIDENCE TO PAPER ALLOCATION</p><h2>The complete agent workflow</h2><p>Follow each handoff from required market data through independent Risk review, the CIO decision, hard controls, and performance feedback.</p></section>
-      <div className="workflow-profile panel"><div><span>Interactive profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div><span>Weekly schedule</span><strong>{status.scheduler ? "Automatic · Pro" : "Setup required"}</strong><small>Saturday at 08:00 Singapore time, with weekend restart recovery</small></div><div><span>Execution scope</span><strong>Paper only</strong><small>No broker or live-trading connection</small></div></div>
+      <div className="workflow-profile panel"><div><span>AI mode</span><strong>Think · Standard</strong><small>One consistent fusion committee for chat, manual runs, and weekly automation.</small></div><div><span>Weekly schedule</span><strong>{status.scheduler ? "Automatic · Think" : "Setup required"}</strong><small>Saturday at 08:00 Singapore time, with weekend restart recovery</small></div><div><span>Execution scope</span><strong>Paper only</strong><small>No broker or live-trading connection</small></div></div>
       <section className="workflow-track" aria-label="Investment committee workflow">{workflowStages.map((stage, index) => <article className={`workflow-step workflow-${stage.tone}`} key={stage.number}><div className="workflow-step-head"><b>{stage.number}</b><span>{stage.name}</span></div><h3>{stage.owner}</h3><p>{stage.detail}</p>{index < workflowStages.length - 1 && <i className="workflow-arrow" aria-hidden="true">↓</i>}</article>)}</section>
       <section className="workflow-branches"><article className="panel"><div className="panel-head"><div><p className="eyebrow">DATA SAFETY GATE</p><h3>Freshness decides whether work continues</h3></div><span className="status-pill status-approved">Hard control</span></div><div className="branch-grid"><div><b>Fresh or valid cache</b><span>Continue through Research, Risk, CIO, and allocation.</span></div><div className="branch-freeze"><b>Older than five trading days</b><span>Freeze the paper portfolio and record the stale-data warning.</span></div></div></article><article className="panel"><div className="panel-head"><div><p className="eyebrow">HUMAN ELIGIBILITY GATE</p><h3>AI candidates require approval</h3></div><span className="status-pill status-pending">Approval required</span></div><div className="branch-grid"><div><b>Approved</b><span>The security enters the eligible US or China/HK universe.</span></div><div><b>Pending or disabled</b><span>The security may appear in research and receives zero portfolio weight.</span></div></div></article></section>
       <section className="panel feedback-panel"><div className="panel-head"><div><p className="eyebrow">LEARNING LOOP</p><h3>Performance returns to the Risk Agent</h3></div><span>{Number(risk.observations ?? 0)} observations</span></div><div className="feedback-flow"><span>Paper NAV</span><i>→</i><span>Performance metrics</span><i>→</i><span>Risk review</span><i>→</i><span>Three experiments</span><i>→</i><span>Next committee</span></div><p>CAGR, volatility, Sharpe, Sortino, drawdown, cash drag, turnover, regional attribution, hit rate, Brier score, and expected-return error are compared with the mechanical and fully invested controls.</p></section>
@@ -411,7 +402,7 @@ export function ResearchChat() {
     return <><section className="section-title"><p className="eyebrow">ELIGIBILITY CONTROL</p><h2>Approved AI technology universe</h2><p>AI candidates remain pending until you approve them. Only approved tickers can receive paper weights.</p></section>
       <form className="ticker-form panel" onSubmit={addTicker}><label><span>Yahoo ticker</span><input value={newTicker} onChange={(event) => setNewTicker(event.target.value.toUpperCase())} placeholder="Ticker" required /></label><label><span>Market</span><select value={newRegion} onChange={(event) => setNewRegion(event.target.value as "US" | "China/HK")}><option>US</option><option>China/HK</option></select></label><button className="primary-action">Add pending ticker</button></form>
       <div className="universe-summary"><span>{approvedCount} approved</span><span>{pendingCount} pending</span><span>{universe.filter((item) => item.status === "disabled").length} disabled</span></div>
-      <section className="panel table-panel"><table><thead><tr><th>Ticker</th><th>Market</th><th>Status</th><th>Source</th><th>Research thesis</th><th>Action</th></tr></thead><tbody>{universe.map((item) => <tr key={item.ticker}><td><strong>{item.ticker}</strong></td><td>{item.region}</td><td><span className={`status-pill status-${item.status}`}>{item.status}</span></td><td>{item.source}</td><td>{item.thesis || "Awaiting research"}</td><td><div className="row-actions">{item.status !== "approved" && <button onClick={() => changeTicker(item.ticker, "approved")}>Approve</button>}{item.status === "approved" && <button onClick={() => changeTicker(item.ticker, "disabled")}>Disable</button>}<button className="danger" onClick={() => removeTicker(item.ticker)}>Delete</button></div></td></tr>)}</tbody></table>{!universe.length && <p className="empty-copy table-empty">The universe starts empty. Add tickers or approve AI candidates after a Pro run.</p>}</section>
+      <section className="panel table-panel"><table><thead><tr><th>Ticker</th><th>Market</th><th>Status</th><th>Source</th><th>Research thesis</th><th>Action</th></tr></thead><tbody>{universe.map((item) => <tr key={item.ticker}><td><strong>{item.ticker}</strong></td><td>{item.region}</td><td><span className={`status-pill status-${item.status}`}>{item.status}</span></td><td>{item.source}</td><td>{item.thesis || "Awaiting research"}</td><td><div className="row-actions">{item.status !== "approved" && <button onClick={() => changeTicker(item.ticker, "approved")}>Approve</button>}{item.status === "approved" && <button onClick={() => changeTicker(item.ticker, "disabled")}>Disable</button>}<button className="danger" onClick={() => removeTicker(item.ticker)}>Delete</button></div></td></tr>)}</tbody></table>{!universe.length && <p className="empty-copy table-empty">The universe starts empty. Add tickers or approve AI candidates after a Think Standard run.</p>}</section>
     </>;
   }
 
@@ -450,9 +441,8 @@ export function ResearchChat() {
 
   return <main className="app-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>
-    <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><label className="profile-picker"><span>AI depth</span><select value={profile} onChange={(event) => setProfile(event.target.value as Profile)}><option value="flash">Flash · fastest</option><option value="think">Think · standard</option><option value="pro">Pro · deepest</option></select></label><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span><b>SIMULATED</b></div></header>
-    <nav className="primary-bar" aria-label="Primary navigation"><div>{primaryNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => item.id === "committee" ? goToHouse() : setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><span>{navigationLabels[item.id]}</span></button>)}<button className={view === "committee" ? "" : "ask-nav"} onClick={() => goToHouse("chat")}><i aria-hidden="true">?</i><span>Ask Agents</span></button></div><details className="advanced-menu" open={advancedNavigation.some((item) => item.id === view)}><summary>All areas</summary><div>{advancedNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><span>{item.shortLabel}</span>{item.id === "universe" && pendingCount > 0 && <b aria-label={`${pendingCount} pending`}>{pendingCount}</b>}</button>)}</div></details></nav>
-    <nav className="quick-dock" aria-label="One tap headquarters navigation"><button onClick={() => goToRoom("lounge")}><i>⌂</i><span>House</span></button><button onClick={() => goToRoom("research", "research")}><i>⌕</i><span>Research</span></button><button onClick={() => goToRoom("risk", "risk")}><i>!</i><span>Risk</span></button><button onClick={() => goToRoom("cio", "cio")}><i>Ω</i><span>CIO</span></button><button onClick={() => setView("portfolio")}><i>◐</i><span>Portfolio</span></button></nav>
+    <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="single-profile"><span>AI MODE</span><strong>Think · Standard</strong></div><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span><b>SIMULATED</b></div></header>
+    <nav className="quick-dock grouped-dock" aria-label="Grouped command center navigation"><button className={view === "committee" ? "active" : ""} onClick={() => goToRoom("lounge")}><i>⌂</i><span>Today</span></button><details><summary><i>♟</i><span>Agents</span></summary><div><button onClick={() => goToRoom("research", "research")}>Research</button><button onClick={() => goToRoom("risk", "risk")}>Risk</button><button onClick={() => goToRoom("cio", "cio")}>CIO</button><button onClick={() => goToHouse("chat")}>Ask an agent</button></div></details><button className={view === "portfolio" ? "active" : ""} onClick={() => setView("portfolio")}><i>◐</i><span>Portfolio</span></button><details><summary><i>≡</i><span>Records</span></summary><div><button onClick={() => setView("weather")}>Current position</button><button onClick={() => setView("performance")}>Results</button><button onClick={() => setView("universe")}>Approved stocks {pendingCount ? `(${pendingCount})` : ""}</button><button onClick={() => setView("decisions")}>Decision journal</button><button onClick={() => setView("workflow")}>How it works</button></div></details></nav>
     <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}><section className="next-step-card" aria-label="Recommended next action"><div className="next-step-number">NEXT</div><div><span>Tap this next</span><strong>{nextStep.title}</strong><small>{nextStep.detail}</small></div><button onClick={takeNextAction} disabled={running && view === "committee"}>{nextStep.action} →</button></section><div className="page-context">{view !== "committee" && <button className="back-house" onClick={() => goToHouse()}>← House</button>}<div><span>You are here</span><strong>{currentView.label}</strong></div><small>{setupReady ? "Live system" : "Connecting"}</small></div>{view !== "committee" && <div className="navigation-guide"><div><strong>{currentView.label}</strong><span>{view === "portfolio" ? "See what the simulated fund owns and how much cash it holds." : view === "weather" ? "See the current gear, allocation limits, and active instructions." : view === "performance" ? "Review returns, volatility, drawdown, and prediction quality." : view === "risk" ? "Review challenges, hard controls, and improvement ideas." : view === "universe" ? "Approve the stocks the paper portfolio is allowed to hold." : view === "decisions" ? "Read the permanent record of past committee decisions." : "Follow how data moves through each agent and control."}</span></div><button onClick={() => goToHouse("chat")}>Ask an agent about this</button></div>}<CommitteePet />{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }

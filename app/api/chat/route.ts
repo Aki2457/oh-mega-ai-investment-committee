@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as { sessionId?: string; agent?: AgentKind; profile?: Profile; message?: string };
   const sessionId = payload.sessionId?.trim() || crypto.randomUUID();
   const agent: AgentKind = ["research", "cio", "risk"].includes(payload.agent ?? "") ? payload.agent! : "research";
-  const profile: Profile = ["flash", "think", "pro"].includes(payload.profile ?? "") ? payload.profile! : "think";
+  const profile: Profile = "think";
   const message = payload.message?.trim() ?? "";
   if (!message) return Response.json({ error: "message is required" }, { status: 400 });
   const stream = new ReadableStream({
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         send({ type: "stage", stage: "market-data", message: "Loading real market and portfolio data" });
         const [pack, portfolio, history] = await Promise.all([buildMarketPack(), getPortfolio(), getChatHistory(sessionId)]);
         await saveChatMessage({ sessionId, agent, profile, role: "user", content: message });
-        send({ type: "stage", stage: "agent", message: "Running the selected AI profile with web search" });
+        send({ type: "stage", stage: "agent", message: "Running Think Standard with web search" });
         const result = await chatCompletion({
           agent, profile,
           messages: [...history, { role: "user", content: message }],

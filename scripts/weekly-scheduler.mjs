@@ -20,7 +20,7 @@ async function runCommittee() {
   const response = await fetch(`http://127.0.0.1:${port}/api/committee/run`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ trigger: "scheduled", profile: "pro", schedulerToken }),
+    body: JSON.stringify({ trigger: "scheduled", profile: "think", schedulerToken }),
   });
   const message = await response.text();
   if (!response.ok) throw new Error(`Committee returned ${response.status}: ${message.slice(0, 300)}`);
@@ -29,7 +29,7 @@ async function runCommittee() {
   }).filter(Boolean);
   const failed = events.find((event) => event.stage === "error");
   if (failed) throw new Error(`Committee failed: ${failed.message}`);
-  console.log(`[scheduler] Weekly Pro committee completed at ${new Date().toISOString()}`);
+  console.log(`[scheduler] Weekly Think committee completed at ${new Date().toISOString()}`);
 }
 
 async function runWithRetry() {
@@ -61,7 +61,7 @@ async function scheduleForever() {
   }
   for (;;) {
     const nextRun = nextSaturdaySingapore();
-    console.log(`[scheduler] Next Pro committee: ${nextRun.toISOString()} (Saturday 08:00 Singapore)`);
+    console.log(`[scheduler] Next Think committee: ${nextRun.toISOString()} (Saturday 08:00 Singapore)`);
     await new Promise((resolve) => setTimeout(resolve, Math.min(nextRun.getTime() - Date.now(), 2_147_000_000)));
     if (Date.now() + 1_000 < nextRun.getTime()) continue;
     try {

@@ -8,7 +8,7 @@ if (!schedulerToken) {
 const response = await fetch(`${baseUrl}/api/committee/run`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ trigger: "scheduled", profile: "pro", schedulerToken }),
+  body: JSON.stringify({ trigger: "scheduled", profile: "think", schedulerToken }),
 });
 
 if (!response.ok || !response.body) {

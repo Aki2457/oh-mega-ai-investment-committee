@@ -25,7 +25,7 @@ Usage:
   npm run cli -- weather
   npm run cli -- portfolio
   npm run cli -- universe
-  npm run cli -- run [flash|think|pro]
+  npm run cli -- run
   npm run cli -- modify gear <Attack|Balanced|Defense|Lockdown> [note]
   npm run cli -- modify allocation <0-90> [note]
   npm run cli -- modify halt [note]
@@ -76,8 +76,8 @@ async function showUniverse() {
 }
 
 async function runCommittee() {
-  const profile = ["flash", "think", "pro"].includes(commandArgs[0]) ? commandArgs[0] : "pro";
-  heading(`Running ${profile.toUpperCase()} Committee`);
+  const profile = "think";
+  heading("Running THINK STANDARD Committee");
   const response = await request("/api/committee/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ trigger: "manual", profile }) });
   const decoder = new TextDecoder(); let buffer = "";
   for await (const chunk of response.body) {

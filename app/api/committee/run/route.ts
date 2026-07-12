@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const expected = process.env.COMMITTEE_SCHEDULER_TOKEN;
     if (!expected || payload.schedulerToken !== expected) return Response.json({ error: "Invalid scheduler token" }, { status: 401 });
   }
-  const profile: Profile = ["flash", "think", "pro"].includes(payload.profile ?? "") ? payload.profile! : "think";
+  const profile: Profile = "think";
   let streamOpen = true;
   const stream = new ReadableStream({
     start(controller) {
