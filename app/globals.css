@@ -111,6 +111,25 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .action-column button > span, .all-clear > span { min-width: 0; display: grid; gap: 3px; }
 .action-column button strong, .all-clear strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .action-column button small, .all-clear small { color: var(--muted); font-size: 8px; }
+.simple-home { margin-top: 20px; display: grid; gap: 16px; }
+.simple-task { padding: 22px 24px; border: 2px solid #c98b28; border-radius: 17px; background: #fff7df; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.simple-task > div { display: grid; gap: 5px; }.simple-task p, .simple-position p { margin: 0; color: #8b611c; font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+.simple-task h2, .simple-position h2 { margin: 0; color: var(--navy); font-size: 27px; font-weight: 580; }
+.simple-task span { color: #6f6045; font-size: 12px; line-height: 1.5; }
+.simple-task > button { min-width: 140px; min-height: 48px; padding: 10px 16px; border: 0; border-radius: 10px; background: var(--amber); color: var(--navy); font-weight: 850; }
+.simple-task.task-clear { border-color: #8dc8a8; background: #edf9f2; }.simple-task.task-clear p { color: var(--green-dark); }.simple-task.task-clear > button { background: var(--green); }
+.simple-position { padding: 24px; border: 1px solid var(--line); border-radius: 17px; background: white; box-shadow: 0 7px 23px rgba(7,26,44,.05); }
+.simple-position-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.simple-position-head > div { max-width: 760px; display: grid; gap: 5px; }.simple-position-head p { color: var(--green-dark); }.simple-position-head > div > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.simple-numbers { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 18px; }
+.simple-numbers button { min-height: 78px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #f8fafb; display: grid; gap: 4px; text-align: left; }
+.simple-numbers button:hover { border-color: #8fc5aa; background: #f1faf5; }.simple-numbers span { color: var(--muted); font-size: 9px; }.simple-numbers strong { color: var(--navy); font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.simple-position-actions { display: flex; gap: 7px; margin-top: 12px; }.simple-position-actions button { min-height: 36px; padding: 7px 11px; border: 1px solid #b8d5c6; border-radius: 8px; background: white; color: #176a44; font-weight: 750; }
+.simple-chat { margin: 0; }.simple-chat .chat-stream { max-height: 300px; }
+.explore-details { margin-bottom: 30px; border: 1px solid var(--line); border-radius: 14px; background: white; overflow: hidden; }
+.explore-details > summary { min-height: 54px; padding: 14px 18px; background: #f4f7f8; color: #526775; cursor: pointer; font-weight: 750; list-style: none; }
+.explore-details > summary::after { content: "+"; float: right; color: var(--green-dark); font-size: 18px; }.explore-details[open] > summary::after { content: "−"; }
+.explore-details > div { padding: 16px; display: grid; gap: 16px; }
 
 .app-grid { min-height: calc(100vh - 140px); display: grid; grid-template-columns: minmax(0, 1fr); }
 .sidebar { padding: 22px 14px; background: white; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; position: sticky; top: 82px; height: calc(100vh - 82px); overflow-y: auto; }
@@ -672,6 +691,8 @@ td { font-size: 12px; line-height: 1.4; }
   .readiness-score { width: 100%; }
   .action-columns { grid-template-columns: 1fr; }
   .action-done { grid-column: auto; }
+  .simple-task { align-items: stretch; flex-direction: column; }.simple-task > button { width: 100%; }
+  .simple-numbers { grid-template-columns: 1fr 1fr; }
   .app-grid { grid-template-columns: 1fr; }
   .sidebar { position: sticky; top: 146px; z-index: 15; width: 100%; height: auto; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
   .sidebar nav { display: flex; gap: 5px; align-items: center; }
@@ -734,6 +755,8 @@ td { font-size: 12px; line-height: 1.4; }
   .quick-dock { top: 139px; }
   .quick-dock button { min-width: 78px; padding: 5px 7px; display: grid; justify-items: center; gap: 2px; font-size: 9px; }
   .next-step-card { margin-top: 12px; }
+  .simple-task, .simple-position { padding: 17px; }.simple-task h2, .simple-position h2 { font-size: 22px; }
+  .simple-numbers { grid-template-columns: 1fr 1fr; }
   .page-context small { display: none; }
   .sidebar nav { display: flex; overflow-x: auto; }
   .sidebar nav button { flex: 0 0 auto; }
