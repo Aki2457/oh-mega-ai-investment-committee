@@ -186,6 +186,69 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .jrpg-dialogue b { color: var(--green); font-size: 9px; letter-spacing: .13em; }
 .jrpg-dialogue p { margin: 6px 0 0; font-size: 13px; line-height: 1.45; }
 .jrpg-dialogue > span { position: absolute; right: 16px; bottom: 10px; color: var(--amber); animation: thinking-dot 1s infinite; }
+.room-help { padding: 10px 14px; border-bottom: 3px solid var(--navy); background: #fff8cf; display: flex; align-items: center; gap: 12px; color: #4c3b36; }
+.room-help strong { color: var(--navy); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.room-help span { font-size: 10px; }
+.living-room .room-wall { height: 176px; }
+.living-room .room-floor { height: 326px; }
+.room-hotspot { font: inherit; cursor: pointer; transition: filter .15s ease, transform .15s ease; }
+.room-hotspot:hover, .room-hotspot:focus-visible { filter: brightness(1.08); transform: translateY(-3px); }
+.room-hotspot::after { content: ""; position: absolute; inset: -6px; border: 2px dashed rgba(255,248,207,.0); pointer-events: none; }
+.room-hotspot:hover::after, .room-hotspot:focus-visible::after { border-color: rgba(255,248,207,.9); animation: room-select .8s steps(2) infinite; }
+.living-room .room-window { appearance: none; padding: 0; }
+.living-room .room-picture { border-radius: 0; }
+.room-market-screen { width: 280px; height: 100px; padding: 11px 14px; border: 5px solid #293b49; background: #0a2636; color: #b6f6d3; box-shadow: inset 0 0 0 3px #31566a, 7px 7px 0 rgba(63,48,40,.18); display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; text-align: left; position: absolute; left: calc(50% - 140px); top: 24px; }
+.room-market-screen span { grid-column: 1 / 3; color: #75e8aa; font-size: 9px; letter-spacing: .12em; }
+.room-market-screen b { font-size: 19px; }
+.room-market-screen small { grid-column: 1 / 3; color: #9fb4bf; font-size: 8px; }
+.living-room .room-clock { left: calc(50% - 24px); top: 125px; z-index: 3; }
+.living-room .room-picture { right: 4%; top: 30px; }
+.living-room .room-sofa { top: 28px; }
+.living-room .room-sofa span { width: 100%; padding: 4px; background: rgba(255,248,207,.9); border: 2px solid var(--navy); color: var(--navy); font-size: 8px; font-weight: 900; position: absolute; left: 0; bottom: 9px; }
+.living-room .room-table { top: 128px; z-index: 3; }
+.room-risk-desk { width: 118px; height: 72px; padding: 8px; border: 4px solid #553b4f; background: #b75358; box-shadow: inset 0 -11px #944148, 5px 6px 0 rgba(70,46,38,.2); color: #fff8cf; display: grid; align-content: center; gap: 2px; position: absolute; left: 3%; top: 120px; }
+.room-risk-desk span, .room-portfolio-console span, .room-universe-cabinet span { font-size: 8px; letter-spacing: .1em; }
+.room-risk-desk b { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-portfolio-console { width: 176px; height: 92px; padding: 10px; border: 5px solid #253b4b; background: #d8eee3; box-shadow: inset 0 -14px #b5d6c4, 6px 7px 0 rgba(70,46,38,.2); color: var(--navy); display: grid; align-content: center; gap: 3px; text-align: left; position: absolute; right: 3%; top: 116px; }
+.room-portfolio-console b { font-size: 24px; color: #176a44; }
+.room-portfolio-console small { font-size: 8px; }
+.room-universe-cabinet { width: 92px; height: 112px; padding: 8px; border: 5px solid #624334; background: #d39a54; box-shadow: inset 0 -17px #b77e3e, 5px 6px 0 rgba(70,46,38,.2); color: #3e2c28; display: grid; align-content: end; gap: 3px; position: absolute; left: 3%; top: 9px; }
+.room-universe-cabinet i { height: 3px; background: #684936; margin-bottom: 20px; }
+.room-universe-cabinet i + i { margin: -12px 0 10px; }
+.room-universe-cabinet small { font-size: 8px; }
+.living-room .room-plant { right: 20%; top: 77px; transform: scale(.76); }
+.living-room .character-row { width: 100%; height: 100%; left: 0; bottom: 0; display: block; pointer-events: none; }
+.living-room .jrpg-character { width: 104px; min-width: 0; pointer-events: auto; position: absolute; bottom: 14px; transition: left 1.2s steps(8), right 1.2s steps(8), bottom 1.2s steps(8), transform .2s ease; z-index: 6; }
+.living-room .character-research { left: 25%; }
+.living-room .character-risk { left: calc(50% - 52px); }
+.living-room .character-cio { right: 22%; }
+.room-live .character-research.walking { left: 12%; bottom: 92px; }
+.room-live .character-risk.walking { left: 7%; bottom: 76px; }
+.room-live .character-cio.walking { right: 8%; bottom: 80px; }
+.living-room .jrpg-character:hover { transform: translateY(-5px); }
+.living-room .jrpg-character.active { transform: translateY(-4px); }
+.living-room .pixel-person { width: 64px; height: 92px; filter: drop-shadow(4px 5px 0 rgba(55,35,30,.25)); }
+.living-room .pixel-head { width: 38px; height: 34px; left: 13px; top: 16px; border-width: 3px; box-shadow: inset 0 -4px #d8976f; }
+.living-room .pixel-hair { width: 44px; height: 17px; left: 10px; top: 9px; clip-path: polygon(0 0,100% 0,100% 70%,87% 70%,87% 100%,72% 100%,72% 72%,55% 72%,55% 94%,38% 94%,38% 72%,18% 72%,18% 100%,0 100%); }
+.living-room .pixel-body { width: 44px; height: 34px; left: 10px; top: 49px; border-width: 3px; box-shadow: inset 0 -7px rgba(7,26,44,.2); }
+.pixel-eye { width: 5px; height: 6px; background: var(--navy); position: absolute; top: 11px; }
+.pixel-eye.left { left: 7px; }.pixel-eye.right { right: 7px; }
+.pixel-mouth { width: 10px; height: 3px; border-bottom: 2px solid #8a483b; position: absolute; left: 11px; bottom: 5px; }
+.pixel-arm { width: 9px; height: 27px; border: 2px solid var(--navy); background: var(--green); position: absolute; top: 52px; z-index: 2; }
+.pixel-arm.left { left: 4px; }.pixel-arm.right { right: 4px; }
+.character-risk .pixel-arm { background: var(--red); }.character-cio .pixel-arm { background: #8a6aae; }
+.living-room .pixel-leg { width: 15px; height: 16px; bottom: 0; border: 2px solid var(--navy); }
+.living-room .pixel-leg.left { left: 15px; }.living-room .pixel-leg.right { right: 15px; }
+.jrpg-character.walking .pixel-person { animation: character-bob .34s steps(2) infinite; }
+.jrpg-character.walking .pixel-arm.left, .jrpg-character.walking .pixel-leg.right { animation: limb-walk .34s steps(2) infinite; }
+.jrpg-character.walking .pixel-arm.right, .jrpg-character.walking .pixel-leg.left { animation: limb-walk .34s steps(2) infinite reverse; }
+.living-room .jrpg-dialogue { min-height: 112px; margin: 0; border-width: 5px; outline: 0; display: grid; grid-template-columns: 86px 1fr; align-items: center; gap: 14px; }
+.dialogue-portrait { width: 78px; height: 78px; border: 3px solid #d7e5ec; background-image: url('/characters/agent-portraits.png'); background-size: 300% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+.portrait-research .dialogue-portrait { background-position: 0 center; }
+.portrait-risk .dialogue-portrait { background-position: 50% center; }
+.portrait-cio .dialogue-portrait { background-position: 100% center; }
+.jrpg-dialogue > div > b { color: var(--green); font-size: 9px; letter-spacing: .13em; }
+.jrpg-dialogue > div > p { margin: 6px 0 0; font-size: 13px; line-height: 1.45; }
 .command-guide { margin-bottom: 18px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: white; display: grid; grid-template-columns: minmax(240px,.8fr) minmax(0,1.4fr); gap: 28px; align-items: center; }
 .command-guide h2 { margin: 0 0 6px; font-size: 22px; font-weight: 560; }
 .command-guide > div > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
@@ -445,6 +508,18 @@ td { font-size: 12px; line-height: 1.4; }
   0%, 100% { opacity: .25; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-3px); }
 }
+@keyframes character-bob {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+@keyframes limb-walk {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+@keyframes room-select {
+  0% { opacity: .4; }
+  100% { opacity: 1; }
+}
 
 @media (max-width: 1100px) {
   .topbar { grid-template-columns: auto 1fr; }
@@ -500,6 +575,11 @@ td { font-size: 12px; line-height: 1.4; }
   .weather-mod-summary { grid-column: 1 / 4; padding: 10px 0 0; border-left: 0; border-top: 1px solid rgba(70,90,104,.2); }
   .weather-layout { grid-template-columns: 1fr; }
   .command-guide ol, .gear-explainer { grid-template-columns: 1fr 1fr; }
+  .living-room .room-wall { height: 158px; }
+  .room-market-screen { width: 230px; left: calc(50% - 115px); }
+  .living-room .room-picture, .living-room .room-plant { display: none; }
+  .room-portfolio-console { right: 2%; }
+  .room-risk-desk, .room-universe-cabinet { left: 2%; }
 }
 
 @media (max-width: 500px) {
@@ -534,11 +614,26 @@ td { font-size: 12px; line-height: 1.4; }
   .weather-strip { grid-template-columns: 46px 1fr; }
   .weather-strip > button { grid-column: 1 / 3; }
   .weather-mod-summary { grid-column: 1 / 3; }
-  .room-floor { height: 270px; }
-  .room-sofa { width: 70%; left: 15%; }
-  .character-row { width: 94%; left: 3%; }
-  .jrpg-character { min-width: 72px; }
-  .room-plant { display: none; }
+  .room-help { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .living-room .room-wall { height: 155px; }
+  .living-room .room-floor { height: 365px; }
+  .living-room .room-window { width: 96px; left: 3%; }
+  .living-room .room-market-screen { width: 188px; height: 86px; left: auto; right: 3%; top: 16px; padding: 8px; }
+  .room-market-screen b { font-size: 15px; }
+  .living-room .room-clock { display: none; }
+  .living-room .room-sofa { width: 76%; left: 12%; }
+  .room-universe-cabinet { top: 112px; }
+  .room-risk-desk { top: 225px; }
+  .room-portfolio-console { width: 155px; top: 184px; }
+  .living-room .room-table { top: 125px; }
+  .living-room .jrpg-character { transform: scale(.82); transform-origin: bottom center; bottom: 3px; }
+  .living-room .character-research { left: 10%; }
+  .living-room .character-risk { left: calc(50% - 52px); }
+  .living-room .character-cio { right: 7%; }
+  .room-live .character-research.walking, .room-live .character-risk.walking { left: 4%; bottom: 55px; }
+  .room-live .character-cio.walking { right: 3%; bottom: 61px; }
+  .living-room .jrpg-dialogue { grid-template-columns: 64px 1fr; gap: 9px; padding: 10px; }
+  .dialogue-portrait { width: 58px; height: 58px; }
   .jrpg-dialogue p { font-size: 11px; }
   .command-guide ol, .gear-explainer { grid-template-columns: 1fr; }
 }

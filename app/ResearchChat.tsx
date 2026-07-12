@@ -300,7 +300,27 @@ export function ResearchChat() {
     const activeCharacter = chatting ? agent : running ? (["risk"].includes(String(currentStage)) ? "risk" : ["judge", "rebalance", "complete"].includes(String(currentStage)) ? "cio" : "research") : null;
     const dialogue = chatting ? `${agent === "research" ? "Mika" : agent === "risk" ? "Rex" : "Nova"}: ${chatStage || "Let me check the evidence..."}` : running ? `${activeCharacter === "risk" ? "Rex" : activeCharacter === "cio" ? "Nova" : "Mika"}: ${stages[stages.length - 1]?.message || "The weekly meeting is starting."}` : `Nova: Welcome home. Fund Weather is ${weatherMode}, with ${Number(weather.stockPct ?? 0).toFixed(0)}% in stocks.`;
     const characters: Array<{ id: Agent; name: string; role: string }> = [{ id: "research", name: "Mika", role: "Research" }, { id: "risk", name: "Rex", role: "Risk" }, { id: "cio", name: "Nova", role: "CIO" }];
-    return <section className="living-room" aria-label="OH MEGA agent living room"><div className="room-wall"><div className="room-window"><i /><i /><span>MARKET</span></div><div className="room-clock"><b>Ω</b></div><div className="room-picture">AI<br />CAPITAL</div></div><div className="room-floor"><div className="room-sofa" /><div className="room-table"><span>WEEKLY<br />PLAN</span></div><div className="room-plant"><i /><i /><i /><b /></div><div className="character-row">{characters.map((character) => <button className={`jrpg-character character-${character.id} ${activeCharacter === character.id ? "active" : ""}`} onClick={() => setAgent(character.id)} aria-pressed={agent === character.id} key={character.id}><span className="pixel-person"><i className="pixel-hair" /><i className="pixel-head" /><i className="pixel-body" /><i className="pixel-leg left" /><i className="pixel-leg right" /></span><strong>{character.name}</strong><small>{character.role}</small>{activeCharacter === character.id && <em>!</em>}</button>)}</div></div><div className="jrpg-dialogue"><b>{busyLabel(running, chatting)}</b><p>{dialogue}</p><span>▼</span></div></section>;
+    const usProbability = Number(latestFinal.usUpProbability ?? 0) * 100;
+    const chinaProbability = Number(latestFinal.chinaUpProbability ?? 0) * 100;
+    return <section className={`living-room ${running || chatting ? "room-live" : ""}`} aria-label="OH MEGA interactive agent living room">
+      <div className="room-help"><strong>Explore the command room</strong><span>Select a character to ask an agent. Select a glowing workstation to open its full dashboard.</span></div>
+      <div className="room-wall">
+        <button className="room-window room-hotspot" onClick={() => setView("weather")} aria-label="Open Fund Weather"><i /><i /><span>{weatherMode.toUpperCase()} · {Number(weather.cashPct ?? 100).toFixed(0)}% CASH</span></button>
+        <div className="room-clock"><b>Ω</b></div>
+        <button className="room-picture room-hotspot" onClick={() => setView("decisions")}>DECISION<br />JOURNAL</button>
+        <button className="room-market-screen room-hotspot" onClick={() => setView("performance")}><span>WEEKLY SIGNALS</span><b>US {usProbability.toFixed(0)}%</b><b>HK {chinaProbability.toFixed(0)}%</b><small>Open performance ↗</small></button>
+      </div>
+      <div className="room-floor">
+        <button className="room-sofa room-hotspot" onClick={() => setView("committee")} aria-label="Open committee home"><span>COMMITTEE TABLE</span></button>
+        <button className="room-table room-hotspot" onClick={() => setView("workflow")}><span>WEEKLY<br />WORKFLOW</span></button>
+        <button className="room-risk-desk room-hotspot" onClick={() => setView("risk")}><span>RISK</span><b>{String(latestDecision?.riskOpinion ?? "Review")}</b></button>
+        <button className="room-portfolio-console room-hotspot" onClick={() => setView("portfolio")}><span>PAPER PORTFOLIO</span><b>${currentNav.toFixed(2)}</b><small>{displayStockPct.toFixed(0)}% stocks · {displayCashPct.toFixed(0)}% cash</small></button>
+        <button className="room-universe-cabinet room-hotspot" onClick={() => setView("universe")}><i /><i /><span>{approvedCount} APPROVED</span><small>{pendingCount} pending</small></button>
+        <div className="room-plant"><i /><i /><i /><b /></div>
+        <div className="character-row">{characters.map((character) => <button className={`jrpg-character character-${character.id} ${activeCharacter === character.id ? "active walking" : ""}`} onClick={() => setAgent(character.id)} aria-pressed={agent === character.id} key={character.id}><span className="pixel-person" aria-hidden="true"><i className="pixel-hair" /><i className="pixel-head"><b className="pixel-eye left" /><b className="pixel-eye right" /><b className="pixel-mouth" /></i><i className="pixel-body" /><i className="pixel-arm left" /><i className="pixel-arm right" /><i className="pixel-leg left" /><i className="pixel-leg right" /></span><strong>{character.name}</strong><small>{character.role}</small>{activeCharacter === character.id && <em>!</em>}</button>)}</div>
+      </div>
+      <div className={`jrpg-dialogue portrait-${activeCharacter ?? agent}`}><i className="dialogue-portrait" aria-hidden="true" /><div><b>{busyLabel(running, chatting)}</b><p>{dialogue}</p></div><span>▼</span></div>
+    </section>;
   }
 
   function busyLabel(committeeBusy: boolean, agentBusy: boolean) {
