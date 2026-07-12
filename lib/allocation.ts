@@ -15,8 +15,10 @@ function normalize(values: number[]) {
   return high === low ? values.map(() => 0.5) : values.map((value) => (value - low) / (high - low));
 }
 
-export function buildProposal(pack: MarketPack, final: FinalDecision): PortfolioProposal {
-  const target = modeWeights(final.mode);
+export function buildProposal(pack: MarketPack, final: FinalDecision, controls?: { mode?: FinalDecision["mode"]; stockPct?: number; halted?: boolean }): PortfolioProposal {
+  const effectiveMode = controls?.halted ? "Lockdown" : controls?.mode ?? final.mode;
+  const baseTarget = modeWeights(effectiveMode);
+  const target = { stockPct: controls?.halted ? 0 : clamp(controls?.stockPct ?? baseTarget.stockPct, 0, baseTarget.stockPct), cashPct: 0 };
   const approved = new Map(pack.approvedTickers.map((item) => [item.ticker, item.region]));
   const stockFeatures = pack.features.filter((feature) => approved.has(feature.ticker));
   const positions: PortfolioProposal["positions"] = [];
@@ -49,7 +51,7 @@ export function buildProposal(pack: MarketPack, final: FinalDecision): Portfolio
   }
   const allocated = positions.reduce((sum, position) => sum + position.weightPct, 0);
   return {
-    mode: final.mode, stockPct: allocated, cashPct: 100 - allocated,
+    mode: effectiveMode, stockPct: allocated, cashPct: 100 - allocated,
     usSleevePct: regionShares.US, chinaSleevePct: regionShares["China/HK"], positions,
     unallocatedStockPct: target.stockPct - allocated, referencePrices,
   };

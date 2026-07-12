@@ -45,7 +45,7 @@ function stockViewSchema() {
 const analystSchema = {
   type: "object", additionalProperties: false,
   properties: {
-    role: { type: "string" }, model: { type: "string" }, mode: { type: "string", enum: ["Attack", "Balanced", "Defense"] },
+    role: { type: "string" }, model: { type: "string" }, mode: { type: "string", enum: ["Attack", "Balanced", "Defense", "Lockdown"] },
     usUpProbability: { type: "number", minimum: 0, maximum: 1 }, chinaUpProbability: { type: "number", minimum: 0, maximum: 1 },
     usExpectedReturnPct: { type: "number" }, chinaExpectedReturnPct: { type: "number" }, confidence: { type: "number", minimum: 0, maximum: 1 },
     catalysts: { type: "array", items: { type: "string" } }, risks: { type: "array", items: { type: "string" } }, rationale: { type: "string" },
@@ -77,7 +77,7 @@ const scoreSchema = {
 const finalSchema = {
   type: "object", additionalProperties: false,
   properties: {
-    mode: { type: "string", enum: ["Attack", "Balanced", "Defense"] }, confidence: { type: "number", minimum: 0, maximum: 1 },
+    mode: { type: "string", enum: ["Attack", "Balanced", "Defense", "Lockdown"] }, confidence: { type: "number", minimum: 0, maximum: 1 },
     usUpProbability: { type: "number", minimum: 0, maximum: 1 }, chinaUpProbability: { type: "number", minimum: 0, maximum: 1 },
     usExpectedReturnPct: { type: "number" }, chinaExpectedReturnPct: { type: "number" },
     usSleevePct: { type: "number", minimum: 35, maximum: 65 }, chinaSleevePct: { type: "number", minimum: 35, maximum: 65 },
@@ -203,7 +203,7 @@ export async function riskOpinion(pack: MarketPack, opinions: AnalystOpinion[], 
 export async function judgeDecision(pack: MarketPack, opinions: AnalystOpinion[], risk: RiskOpinion, profile: Profile): Promise<FinalDecision> {
   const model = profileModels[profile].judge;
   return structured({ model, schemaName: "final_decision", schema: finalSchema, messages: [
-    { role: "system", content: "You are the CIO judge for a simulated paper portfolio. You have full discretion to choose Attack, Balanced, or Defense. Score every analyst from 0 to 100 for evidence quality, data consistency, calibration, source quality, and risk awareness. Keep each regional stock-sleeve share between 35 and 65 and make them total 100. Treat Risk objections explicitly. Use approved stocks only for stockViews. Candidates remain pending. Return the required JSON." },
+    { role: "system", content: "You are the CIO judge for a simulated paper portfolio. You may choose Attack, Balanced, Defense, or Lockdown. Lockdown means no investing and 100% cash, reserved for severe risk or unusable evidence. Score every analyst from 0 to 100 for evidence quality, data consistency, calibration, source quality, and risk awareness. Keep each regional stock-sleeve share between 35 and 65 and make them total 100. Treat Risk objections explicitly. Use approved stocks only for stockViews. Candidates remain pending. Return the required JSON." },
     { role: "user", content: `${sharedContext(pack)}\nAnalyst opinions: ${JSON.stringify(opinions)}\nIndependent Risk opinion: ${JSON.stringify(risk)}\nThe portfolio is simulated and has no broker connection.` },
   ] });
 }

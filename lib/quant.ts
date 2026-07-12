@@ -106,6 +106,7 @@ export function mechanicalMode(us: MarketFeatures, china: MarketFeatures): Mode 
 }
 
 export function modeWeights(mode: Mode) {
+  if (mode === "Lockdown") return { stockPct: 0, cashPct: 100 };
   if (mode === "Attack") return { stockPct: 90, cashPct: 10 };
   if (mode === "Balanced") return { stockPct: 55, cashPct: 45 };
   return { stockPct: 25, cashPct: 75 };

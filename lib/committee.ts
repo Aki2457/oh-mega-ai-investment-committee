@@ -1,5 +1,5 @@
 import {
-  completeRun, createRun, failRun, findRunByWeek, listUniverse, rebalancePaper, restartRun, saveCandidates, saveDecision, saveOpinion,
+  completeRun, createRun, failRun, findRunByWeek, listModifications, rebalancePaper, replaceCommitteeModifications, restartRun, saveCandidates, saveDecision, saveOpinion,
 } from "@/db/repository";
 import { buildMarketPack } from "./market-data";
 import { buildProposal, forecastWeek } from "./allocation";
@@ -117,11 +117,16 @@ export async function runCommittee(input: {
     let final: FinalDecision;
     try { final = await judgeDecision(pack, analystOpinions, risk, profile); }
     catch (error) { final = fallbackDecision(pack, quant, error instanceof Error ? error.message : "AI CIO output failed validation"); }
-    const proposal = buildProposal(pack, final);
+    const manual = (await listModifications(true)).filter((item) => item.source === "manual");
+    const gear = manual.find((item) => item.type === "gear")?.value as FinalDecision["mode"] | undefined;
+    const allocation = manual.find((item) => item.type === "stock_allocation")?.value;
+    const halted = manual.some((item) => item.type === "halt" && item.value !== "false") || gear === "Lockdown";
+    const proposal = buildProposal(pack, final, { mode: gear, stockPct: allocation == null ? undefined : Number(allocation), halted });
     await saveCandidates(final.candidates);
     await saveDecision(runId, final, proposal, risk);
     await input.emit?.({ stage: "rebalance", message: proposal.positions.length ? "Updating the simulated paper portfolio." : "Approved universe is empty. The paper portfolio remains in cash." });
     await rebalancePaper(runId, proposal);
+    await replaceCommitteeModifications(proposal.mode, proposal.stockPct, final.rationale);
     await completeRun(runId, pack, final);
     const result = { id: runId, forecastWeek: week, status: "completed", profile, market: pack, opinions: analystOpinions, risk, final, proposal };
     await input.emit?.({ stage: "complete", message: "Committee decision and paper allocation completed.", data: result });

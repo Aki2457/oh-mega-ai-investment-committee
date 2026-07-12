@@ -35,6 +35,18 @@ test("enforces single-name caps and preserves total weight", () => {
   assert.equal(proposal.usSleevePct + proposal.chinaSleevePct, 100);
 });
 
+test("Lockdown and halt controls force 100 percent cash", () => {
+  const approved = [{ ticker: "AAPL", region: "US" as const }];
+  const features = [{ ...baseFeature, ticker: "AAPL" }];
+  const lockdown = buildProposal(pack(approved, features), { ...final, mode: "Lockdown" });
+  const halted = buildProposal(pack(approved, features), final, { halted: true });
+  assert.equal(lockdown.stockPct, 0);
+  assert.equal(lockdown.cashPct, 100);
+  assert.equal(lockdown.mode, "Lockdown");
+  assert.equal(halted.stockPct, 0);
+  assert.equal(halted.cashPct, 100);
+});
+
 test("uses the next Friday as the forecast week", () => {
   assert.equal(forecastWeek(new Date("2026-07-11T00:00:00Z")), "2026-07-17");
 });

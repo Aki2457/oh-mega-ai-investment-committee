@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 
 type Profile = "flash" | "think" | "pro";
 type Agent = "research" | "cio" | "risk";
-type View = "committee" | "workflow" | "universe" | "portfolio" | "decisions" | "performance" | "risk";
+type View = "committee" | "weather" | "workflow" | "universe" | "portfolio" | "decisions" | "performance" | "risk";
 type Citation = { url: string; title: string; content?: string };
 type Message = { id: string; role: "user" | "assistant"; text: string; citations?: Citation[]; model?: string };
 type UniverseItem = { id: string; ticker: string; region: "US" | "China/HK"; status: string; source: string; thesis: string; citations: Citation[] };
@@ -25,6 +25,7 @@ const profiles = {
 
 const views: Array<{ id: View; label: string; shortLabel: string; icon: string; group: "Decide" | "Manage" | "Review" }> = [
   { id: "committee", label: "Investment Committee", shortLabel: "Committee", icon: "Ω", group: "Decide" },
+  { id: "weather", label: "Fund Weather", shortLabel: "Weather", icon: "☀", group: "Decide" },
   { id: "workflow", label: "Agent Workflow", shortLabel: "Workflow", icon: "↳", group: "Decide" },
   { id: "universe", label: "Approved Universe", shortLabel: "Universe", icon: "◇", group: "Manage" },
   { id: "portfolio", label: "Paper Portfolio", shortLabel: "Portfolio", icon: "◐", group: "Manage" },
@@ -112,6 +113,7 @@ export function ResearchChat() {
   const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
   const [portfolio, setPortfolio] = useState<Record<string, Array<Record<string, unknown>>>>({ positions: [], transactions: [], nav: [], decisions: [] });
   const [risk, setRisk] = useState<Record<string, unknown>>({ metrics: {}, baseline: {}, controls: {} });
+  const [weather, setWeather] = useState<Record<string, unknown>>({ mode: "Balanced", stockPct: 55, cashPct: 45, modifications: [] });
   const [stages, setStages] = useState<Stage[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
@@ -123,20 +125,26 @@ export function ResearchChat() {
   const [sessionId] = useState(makeId);
   const [newTicker, setNewTicker] = useState("");
   const [newRegion, setNewRegion] = useState<"US" | "China/HK">("US");
+  const [modType, setModType] = useState("gear");
+  const [modValue, setModValue] = useState("Balanced");
+  const [modTicker, setModTicker] = useState("");
+  const [modNote, setModNote] = useState("");
 
   async function refresh() {
-    const [statusResult, universeResult, historyResult, portfolioResult, riskResult] = await Promise.all([
+    const [statusResult, universeResult, historyResult, portfolioResult, riskResult, weatherResult] = await Promise.all([
       fetch("/api/status", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/universe", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/committee/history", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/portfolio", { cache: "no-store" }).then((response) => response.json()),
       fetch("/api/risk", { cache: "no-store" }).then((response) => response.json()),
-    ]) as [Record<string, unknown>, { universe?: UniverseItem[] }, { runs?: Array<Record<string, unknown>> }, Record<string, Array<Record<string, unknown>>>, Record<string, unknown>];
+      fetch("/api/weather", { cache: "no-store" }).then((response) => response.json()),
+    ]) as [Record<string, unknown>, { universe?: UniverseItem[] }, { runs?: Array<Record<string, unknown>> }, Record<string, Array<Record<string, unknown>>>, Record<string, unknown>, Record<string, unknown>];
     setStatus(statusResult);
     setUniverse(universeResult.universe ?? []);
     setRuns(historyResult.runs ?? []);
     setPortfolio(portfolioResult);
     setRisk(riskResult);
+    setWeather(weatherResult);
   }
 
   useEffect(() => {
@@ -168,6 +176,20 @@ export function ResearchChat() {
   const displayCashPct = 100 - displayStockPct;
 
   const setupReady = Boolean(status.openRouter && status.yahoo && status.persistence);
+  const weatherMode = String(weather.mode ?? "Balanced");
+  const activeMods = ((weather.modifications ?? []) as Array<Record<string, unknown>>).filter((item) => item.active);
+
+  async function addMod(event: FormEvent) {
+    event.preventDefault(); setError("");
+    const response = await fetch("/api/weather", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: modType, value: modType === "halt" ? "true" : modValue, ticker: modTicker, note: modNote }) });
+    const result = await response.json();
+    if (!response.ok) { setError(String(result.error ?? "Unable to add modification")); return; }
+    setModNote(""); setModTicker(""); await refresh();
+  }
+
+  async function removeMod(id: string) {
+    await fetch(`/api/weather?id=${encodeURIComponent(id)}`, { method: "DELETE" }); await refresh();
+  }
 
   async function runNow() {
     setRunning(true); setError(""); setStages([]);
@@ -224,6 +246,7 @@ export function ResearchChat() {
 
   function CommitteeView() {
     return <>
+      <WeatherStrip />
       <section className="decision-cockpit">
         <div className="decision-copy"><div className="decision-label"><p className="eyebrow">NEXT-WEEK PAPER DECISION</p><ModeBadge mode={displayMode} /></div><h2>{latestFinal.mode ? `${displayMode} mode` : "Ready for the first committee"}</h2><p>{String(latestFinal.rationale ?? "Run the committee to combine live market data, cited research, independent Risk review, and a final CIO allocation.")}</p><div className="hero-actions"><button className="primary-action" onClick={runNow} disabled={running || !setupReady}>{running ? "Committee running" : "Run Investment Committee"}</button><span>Weekly scheduled decisions always use Pro</span></div></div>
         <AllocationDonut stockPct={displayStockPct} cashPct={displayCashPct} label={displayMode} />
@@ -251,6 +274,15 @@ export function ResearchChat() {
       </div>
       {!!stages.length && <section className="panel stage-panel" aria-live="polite"><div className="panel-head"><h3>Run stages</h3><span>{stages[stages.length - 1]?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
     </>;
+  }
+
+  function WeatherStrip() {
+    const symbol = weatherMode === "Attack" ? "☀" : weatherMode === "Balanced" ? "⛅" : weatherMode === "Defense" ? "🌧" : "🔒";
+    return <section className={`weather-strip weather-${weatherMode.toLowerCase()}`} aria-label="Current fund weather"><div className="weather-symbol" aria-hidden="true">{symbol}</div><div><p>FUND WEATHER</p><h2>{weatherMode}</h2><span>{Number(weather.stockPct ?? 0).toFixed(0)}% stocks · {Number(weather.cashPct ?? 100).toFixed(0)}% cash</span></div><div className="weather-mod-summary"><strong>{activeMods.length} active modification{activeMods.length === 1 ? "" : "s"}</strong><span>{weatherMode === "Lockdown" ? "Investing stopped. Portfolio held in cash." : activeMods.length ? "Manual or weekly committee controls are active." : "Standard gear rules are active."}</span></div><button onClick={() => setView("weather")}>View controls</button></section>;
+  }
+
+  function WeatherView() {
+    return <><WeatherStrip /><section className="section-title"><p className="eyebrow">PUBLIC POSITIONING STATUS</p><h2>Fund weather and modifications</h2><p>This panel shows the current investment gear, cash position, and every active operating instruction.</p></section><div className="weather-layout"><section className="panel"><div className="panel-head"><h3>Active modifications</h3><span>{activeMods.length} active</span></div><div className="mod-list">{activeMods.map((mod) => <article key={String(mod.id)}><div><span>{String(mod.source)} · {String(mod.type).replace("_", " ")}</span><strong>{mod.type === "gear" ? String(mod.value) : mod.type === "stock_allocation" ? `${mod.value}% stocks` : mod.ticker ? `${String(mod.type).toUpperCase()} ${mod.ticker}` : "Investing stopped"}</strong><small>{String(mod.note || "No additional note")}</small></div>{mod.source === "manual" && <button onClick={() => removeMod(String(mod.id))}>Remove</button>}</article>)}{!activeMods.length && <p className="empty-copy">No modifications are active.</p>}</div></section><section className="panel"><div className="panel-head"><h3>Add manual modification</h3><span>Human control</span></div><form className="mod-form" onSubmit={addMod}><label><span>Modification</span><select value={modType} onChange={(event) => { setModType(event.target.value); setModValue(event.target.value === "stock_allocation" ? "55" : event.target.value === "gear" ? "Balanced" : "true"); }}><option value="gear">Change investment gear</option><option value="stock_allocation">Set stock allocation</option><option value="halt">Stop investments</option><option value="buy">Buy instruction</option><option value="short">Short instruction</option></select></label>{modType === "gear" && <label><span>Gear</span><select value={modValue} onChange={(event) => setModValue(event.target.value)}><option>Attack</option><option>Balanced</option><option>Defense</option><option>Lockdown</option></select></label>}{modType === "stock_allocation" && <label><span>Stocks, percent of NAV</span><input type="number" min="0" max="90" value={modValue} onChange={(event) => setModValue(event.target.value)} /></label>}{(modType === "buy" || modType === "short") && <label><span>Approved ticker</span><input value={modTicker} onChange={(event) => setModTicker(event.target.value.toUpperCase())} placeholder="AAPL" /></label>}<label><span>Reason or instruction</span><input value={modNote} onChange={(event) => setModNote(event.target.value)} placeholder="Why this control is needed" /></label><button className="primary-action" type="submit">Activate modification</button></form><p className="mod-safety">Lockdown and Stop Investments force 100% cash. Buy and short instructions are recorded for the simulated committee and remain subject to portfolio controls.</p></section></div></>;
   }
 
   function WorkflowView() {
@@ -308,7 +340,7 @@ export function ResearchChat() {
     </>;
   }
 
-  const content = view === "committee" ? CommitteeView() : view === "workflow" ? WorkflowView() : view === "universe" ? UniverseView() : view === "portfolio" ? PortfolioView() : view === "decisions" ? DecisionsView() : view === "performance" ? PerformanceView() : RiskView();
+  const content = view === "committee" ? CommitteeView() : view === "weather" ? WeatherView() : view === "workflow" ? WorkflowView() : view === "universe" ? UniverseView() : view === "portfolio" ? PortfolioView() : view === "decisions" ? DecisionsView() : view === "performance" ? PerformanceView() : RiskView();
 
   return <main className="app-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>

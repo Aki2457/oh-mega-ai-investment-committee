@@ -103,6 +103,18 @@ export const chatMessages = sqliteTable("chat_messages", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("chat_session_idx").on(table.sessionId, table.createdAt)]);
 
+export const fundModifications = sqliteTable("fund_modifications", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  value: text("value").notNull().default(""),
+  ticker: text("ticker"),
+  note: text("note").notNull().default(""),
+  source: text("source", { enum: ["manual", "committee"] }).notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

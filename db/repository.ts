@@ -1,4 +1,4 @@
-import type { Citation, FinalDecision, MarketPack, PortfolioProposal, Profile, Region, RiskOpinion } from "@/lib/types";
+import type { Citation, FinalDecision, FundModification, MarketPack, PortfolioProposal, Profile, Region, RiskOpinion } from "@/lib/types";
 
 type D1Row = Record<string, unknown>;
 type BoundStatement = {
@@ -72,6 +72,7 @@ export function ensureDatabase() {
       `CREATE TABLE IF NOT EXISTS chat_messages (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, agent TEXT NOT NULL, profile TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, citations_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
       `CREATE INDEX IF NOT EXISTS chat_session_idx ON chat_messages(session_id, created_at)`,
       `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+      `CREATE TABLE IF NOT EXISTS fund_modifications (id TEXT PRIMARY KEY, type TEXT NOT NULL, value TEXT NOT NULL DEFAULT '', ticker TEXT, note TEXT NOT NULL DEFAULT '', source TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
       ];
       await d1.batch(statements.map((statement) => d1.prepare(statement)));
       await d1.prepare("INSERT INTO nav_history (id, valuation_date, nav, cash_weight_pct, mode) VALUES (?, ?, 100, 100, 'Cash') ON CONFLICT(id) DO NOTHING")
@@ -173,7 +174,7 @@ export async function saveDecision(runId: string, final: FinalDecision, proposal
   await ensureDatabase();
   await db().prepare(`INSERT OR REPLACE INTO decisions (id, run_id, mode, stock_pct, cash_pct, us_sleeve_pct, china_sleeve_pct, risk_opinion, rationale, citations_json)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(crypto.randomUUID(), runId, final.mode, proposal.stockPct, proposal.cashPct, proposal.usSleevePct, proposal.chinaSleevePct, risk.opinion, final.rationale, JSON.stringify(final.citations)).run();
+    .bind(crypto.randomUUID(), runId, proposal.mode, proposal.stockPct, proposal.cashPct, proposal.usSleevePct, proposal.chinaSleevePct, risk.opinion, final.rationale, JSON.stringify(final.citations)).run();
 }
 
 export async function rebalancePaper(runId: string, proposal: PortfolioProposal) {
@@ -269,6 +270,34 @@ export async function getPortfolio() {
     nav: nav.results.map((row) => ({ date: row.valuation_date, nav: Number(row.nav), cashWeightPct: Number(row.cash_weight_pct), mode: row.mode, runId: row.run_id })),
     decisions: decisionsRows.results.map((row) => ({ id: row.id, runId: row.run_id, mode: row.mode, stockPct: Number(row.stock_pct), cashPct: Number(row.cash_pct), usSleevePct: Number(row.us_sleeve_pct), chinaSleevePct: Number(row.china_sleeve_pct), riskOpinion: row.risk_opinion, rationale: row.rationale, citations: parseJson(row.citations_json, []), createdAt: row.created_at })),
   };
+}
+
+export async function listModifications(activeOnly = false): Promise<FundModification[]> {
+  await ensureDatabase();
+  const result = await db().prepare(`SELECT * FROM fund_modifications ${activeOnly ? "WHERE active=1" : ""} ORDER BY created_at DESC`).all<D1Row>();
+  return result.results.map((row) => ({ id: String(row.id), type: row.type as FundModification["type"], value: String(row.value ?? ""), ticker: row.ticker ? String(row.ticker) : null, note: String(row.note ?? ""), source: row.source as FundModification["source"], active: Boolean(row.active), createdAt: String(row.created_at) }));
+}
+
+export async function addModification(input: Omit<FundModification, "id" | "active" | "createdAt">) {
+  await ensureDatabase();
+  const id = crypto.randomUUID();
+  await db().prepare("INSERT INTO fund_modifications (id,type,value,ticker,note,source,active) VALUES (?,?,?,?,?,?,1)")
+    .bind(id, input.type, input.value, input.ticker?.toUpperCase() ?? null, input.note, input.source).run();
+  return (await listModifications()).find((item) => item.id === id)!;
+}
+
+export async function disableModification(id: string) {
+  await ensureDatabase();
+  await db().prepare("UPDATE fund_modifications SET active=0, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
+}
+
+export async function replaceCommitteeModifications(mode: FinalDecision["mode"], stockPct: number, note: string) {
+  await ensureDatabase();
+  await db().batch([
+    db().prepare("UPDATE fund_modifications SET active=0, updated_at=CURRENT_TIMESTAMP WHERE source='committee' AND active=1"),
+    db().prepare("INSERT INTO fund_modifications (id,type,value,note,source,active) VALUES (?,?,?,?, 'committee',1)").bind(crypto.randomUUID(), "gear", mode, note),
+    db().prepare("INSERT INTO fund_modifications (id,type,value,note,source,active) VALUES (?,?,?,?, 'committee',1)").bind(crypto.randomUUID(), "stock_allocation", String(stockPct), "Weekly committee stock allocation"),
+  ]);
 }
 
 export async function saveChatMessage(input: { sessionId: string; agent: string; profile: Profile; role: "user" | "assistant"; content: string; citations?: Citation[] }) {

@@ -1,5 +1,5 @@
 export type Region = "US" | "China/HK";
-export type Mode = "Attack" | "Balanced" | "Defense";
+export type Mode = "Attack" | "Balanced" | "Defense" | "Lockdown";
 export type Profile = "flash" | "think" | "pro";
 export type AgentKind = "research" | "cio" | "risk";
 
@@ -132,4 +132,15 @@ export type PortfolioProposal = {
   positions: Array<{ ticker: string; region: Region; weightPct: number; referencePrice: number }>;
   unallocatedStockPct: number;
   referencePrices: Record<string, number>;
+};
+
+export type FundModification = {
+  id: string;
+  type: "gear" | "stock_allocation" | "halt" | "buy" | "short";
+  value: string;
+  ticker: string | null;
+  note: string;
+  source: "manual" | "committee";
+  active: boolean;
+  createdAt: string;
 };

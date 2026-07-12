@@ -27,7 +27,7 @@ export async function calculateRiskDashboard() {
   type RunShape = {
     status: string;
     final: Record<string, unknown>;
-    market: { mechanicalMode?: "Attack" | "Balanced" | "Defense"; features?: Array<{ ticker: string; return1w: number }> };
+    market: { mechanicalMode?: "Attack" | "Balanced" | "Defense" | "Lockdown"; features?: Array<{ ticker: string; return1w: number }> };
     opinions?: Array<{ role: string; payload: Record<string, unknown> }>;
   };
   const typedRuns = runs as RunShape[];
@@ -51,7 +51,7 @@ export async function calculateRiskDashboard() {
     const nextChina = next.market.features?.find((item) => item.ticker === "3067.HK")?.return1w ?? 0;
     const usSleeve = Number(run.final.usSleevePct ?? 50) / 100;
     const chinaSleeve = Number(run.final.chinaSleevePct ?? 50) / 100;
-    const committeeStockWeight = modeWeights((run.final.mode ?? "Balanced") as "Attack" | "Balanced" | "Defense").stockPct / 100;
+    const committeeStockWeight = modeWeights((run.final.mode ?? "Balanced") as "Attack" | "Balanced" | "Defense" | "Lockdown").stockPct / 100;
     const mechanicalStockWeight = modeWeights(run.market.mechanicalMode ?? "Balanced").stockPct / 100;
     const stockControlReturn = (nextUs + nextChina) / 2;
     return {
