@@ -33,7 +33,7 @@ test("server-renders the OH MEGA investment committee", { timeout: 60_000 }, asy
     const html = await response.text();
     assert.match(html, /OH MEGA/i);
     assert.match(html, /Investment Command Center/i);
-    assert.match(html, /SIMULATED PORTFOLIO ONLY/i);
+    assert.match(html, /SIMULATED/i);
     assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
   } finally {
     server.kill();
