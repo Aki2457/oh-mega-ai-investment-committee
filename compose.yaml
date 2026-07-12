@@ -1,0 +1,22 @@
+services:
+  oh-mega:
+    build: .
+    image: oh-mega-ai-committee:local
+    container_name: oh-mega-ai-committee-local
+    restart: unless-stopped
+    ports:
+      - "8890:8080"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MOCK: "0"
+      STOCK_DATA_PROVIDER: ${STOCK_DATA_PROVIDER:-all}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      MASSIVE_API_KEY: ${MASSIVE_API_KEY:-}
+      COMMITTEE_SCHEDULER_TOKEN: ${COMMITTEE_SCHEDULER_TOKEN:-replace-with-a-long-random-value}
+      OH_MEGA_BASE_URL: http://localhost:8890
+    volumes:
+      - oh-mega-data:/data
+
+volumes:
+  oh-mega-data:

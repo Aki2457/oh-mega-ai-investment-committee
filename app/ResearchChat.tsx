@@ -1,0 +1,314 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+type Profile = "flash" | "think" | "pro";
+type Agent = "research" | "cio" | "risk";
+type View = "committee" | "workflow" | "universe" | "portfolio" | "decisions" | "performance" | "risk";
+type Citation = { url: string; title: string; content?: string };
+type Message = { id: string; role: "user" | "assistant"; text: string; citations?: Citation[]; model?: string };
+type UniverseItem = { id: string; ticker: string; region: "US" | "China/HK"; status: string; source: string; thesis: string; citations: Citation[] };
+type Stage = { stage: string; message: string; data?: Record<string, unknown> };
+
+const profiles = {
+  flash: { label: "Flash", detail: "Fast · free 20B", description: "GPT-OSS 20B handles research, Risk, and the CIO call." },
+  think: { label: "Think", detail: "Fusion · free models", description: "GPT-OSS 20B quantitative research with GPT-OSS 120B macro and CIO judgment." },
+  pro: { label: "Pro", detail: "Deep · free 120B", description: "Parallel research with GPT-OSS 120B Risk review and final CIO judgment." },
+} as const;
+
+const views: Array<{ id: View; label: string; shortLabel: string; icon: string; group: "Decide" | "Manage" | "Review" }> = [
+  { id: "committee", label: "Investment Committee", shortLabel: "Committee", icon: "Ω", group: "Decide" },
+  { id: "workflow", label: "Agent Workflow", shortLabel: "Workflow", icon: "↳", group: "Decide" },
+  { id: "universe", label: "Approved Universe", shortLabel: "Universe", icon: "◇", group: "Manage" },
+  { id: "portfolio", label: "Paper Portfolio", shortLabel: "Portfolio", icon: "◐", group: "Manage" },
+  { id: "decisions", label: "Decision Journal", shortLabel: "Journal", icon: "≡", group: "Review" },
+  { id: "performance", label: "Performance", shortLabel: "Performance", icon: "↗", group: "Review" },
+  { id: "risk", label: "Risk Review", shortLabel: "Risk", icon: "!", group: "Review" },
+];
+
+const agents: Array<{ id: Agent; label: string }> = [
+  { id: "research", label: "Research" },
+  { id: "cio", label: "CIO" },
+  { id: "risk", label: "Risk" },
+];
+
+async function readSse(response: Response, onEvent: (value: Record<string, unknown>) => void) {
+  if (!response.ok || !response.body) {
+    const payload = await response.json().catch(() => ({ error: `Request failed with ${response.status}` })) as { error?: unknown };
+    throw new Error(String(payload.error ?? `Request failed with ${response.status}`));
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+    for (const event of events) {
+      const line = event.split("\n").find((item) => item.startsWith("data: "));
+      if (line) onEvent(JSON.parse(line.slice(6)) as Record<string, unknown>);
+    }
+  }
+}
+
+function percent(value: unknown, digits = 1) {
+  const number = Number(value ?? 0);
+  return `${(number * 100).toFixed(digits)}%`;
+}
+
+function probability(value: unknown) {
+  return `${(Number(value ?? 0) * 100).toFixed(0)}%`;
+}
+
+function ModeBadge({ mode }: { mode: string }) {
+  return <span className={`mode-badge mode-${mode.toLowerCase()}`}>{mode}</span>;
+}
+
+function AllocationDonut({ stockPct, cashPct, label }: { stockPct: number; cashPct: number; label: string }) {
+  return <div className="allocation-visual" aria-label={`${stockPct.toFixed(0)} percent stocks and ${cashPct.toFixed(0)} percent cash`}>
+    <div className="allocation-donut" style={{ background: `conic-gradient(var(--green) 0 ${stockPct}%, #dfe7ec ${stockPct}% 100%)` }}><div><strong>{stockPct.toFixed(0)}%</strong><span>{label}</span></div></div>
+    <div className="allocation-legend"><span><i className="legend-stock" />Stocks <b>{stockPct.toFixed(0)}%</b></span><span><i className="legend-cash" />Cash <b>{cashPct.toFixed(0)}%</b></span></div>
+  </div>;
+}
+
+function ProbabilityBar({ label, value, detail }: { label: string; value: number; detail: string }) {
+  const bounded = Math.max(0, Math.min(100, value));
+  return <div className="probability-row"><div><span>{label}</span><strong>{bounded.toFixed(0)}%</strong></div><div className="probability-track"><i style={{ width: `${bounded}%` }} /></div><small>{detail}</small></div>;
+}
+
+function Sources({ citations }: { citations?: Citation[] }) {
+  if (!citations?.length) return <p className="empty-copy">No web citations recorded.</p>;
+  return <div className="source-list">{citations.map((citation) => (
+    <a href={citation.url} target="_blank" rel="noreferrer" key={citation.url}>
+      <span>{citation.title || new URL(citation.url).hostname}</span><small>{new URL(citation.url).hostname}</small>
+    </a>
+  ))}</div>;
+}
+
+function MarkdownMessage({ text }: { text: string }) {
+  return <div className="markdown-body"><ReactMarkdown
+    remarkPlugins={[remarkGfm]}
+    components={{
+      a({ node, ...props }) { void node; return <a {...props} target="_blank" rel="noreferrer" />; },
+    }}
+  >{text}</ReactMarkdown></div>;
+}
+
+export function ResearchChat() {
+  const [view, setView] = useState<View>("committee");
+  const [profile, setProfile] = useState<Profile>("think");
+  const [agent, setAgent] = useState<Agent>("research");
+  const [status, setStatus] = useState<Record<string, unknown>>({});
+  const [universe, setUniverse] = useState<UniverseItem[]>([]);
+  const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
+  const [portfolio, setPortfolio] = useState<Record<string, Array<Record<string, unknown>>>>({ positions: [], transactions: [], nav: [], decisions: [] });
+  const [risk, setRisk] = useState<Record<string, unknown>>({ metrics: {}, baseline: {}, controls: {} });
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [running, setRunning] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    { id: "welcome", role: "assistant", text: "Select an agent and ask a question. Every live answer requires real Yahoo data, and current questions can use web search." },
+  ]);
+  const [chatting, setChatting] = useState(false);
+  const [sessionId] = useState(() => crypto.randomUUID());
+  const [newTicker, setNewTicker] = useState("");
+  const [newRegion, setNewRegion] = useState<"US" | "China/HK">("US");
+
+  async function refresh() {
+    const [statusResult, universeResult, historyResult, portfolioResult, riskResult] = await Promise.all([
+      fetch("/api/status", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/universe", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/committee/history", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/portfolio", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/risk", { cache: "no-store" }).then((response) => response.json()),
+    ]) as [Record<string, unknown>, { universe?: UniverseItem[] }, { runs?: Array<Record<string, unknown>> }, Record<string, Array<Record<string, unknown>>>, Record<string, unknown>];
+    setStatus(statusResult);
+    setUniverse(universeResult.universe ?? []);
+    setRuns(historyResult.runs ?? []);
+    setPortfolio(portfolioResult);
+    setRisk(riskResult);
+  }
+
+  useEffect(() => {
+    refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load the committee"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const latestRun = runs[0] ?? null;
+  const latestFinal = (latestRun?.final ?? {}) as Record<string, unknown>;
+  const latestMarket = (latestRun?.market ?? {}) as Record<string, unknown>;
+  const latestFeatures = (latestMarket.features ?? []) as Array<Record<string, unknown>>;
+  const latestUs = latestFeatures.find((item) => item.ticker === "QQQ");
+  const latestChina = latestFeatures.find((item) => item.ticker === "3067.HK");
+  const citations = (latestFinal.citations ?? []) as Citation[];
+  const analystScores = (latestFinal.analystScores ?? []) as Array<Record<string, unknown>>;
+  const nav = portfolio.nav ?? [];
+  const currentNav = nav.length ? Number(nav.at(-1)?.nav ?? 100) : 100;
+  const riskMetrics = (risk.metrics ?? {}) as Record<string, unknown>;
+  const riskBaseline = (risk.baseline ?? {}) as Record<string, unknown>;
+  const latestRiskReview = (risk.latestRisk ?? {}) as Record<string, unknown>;
+  const improvementExperiments = (latestRiskReview.improvementExperiments ?? []) as Array<Record<string, unknown>>;
+  const approvedCount = universe.filter((item) => item.status === "approved").length;
+  const pendingCount = universe.filter((item) => item.status === "pending").length;
+  const stockData = (status.stockData ?? {}) as Record<string, unknown>;
+  const stockProviderCount = 1 + [stockData.massive, stockData.alphaVantage, stockData.finnhub].filter(Boolean).length;
+  const currentView = views.find((item) => item.id === view) ?? views[0];
+  const latestDecision = portfolio.decisions?.[0];
+  const displayMode = String(latestFinal.mode ?? latestDecision?.mode ?? "Cash");
+  const displayStockPct = Number(latestDecision?.stockPct ?? (displayMode === "Attack" ? 90 : displayMode === "Balanced" ? 55 : displayMode === "Defense" ? 25 : 0));
+  const displayCashPct = 100 - displayStockPct;
+
+  const setupReady = Boolean(status.openRouter && status.yahoo && status.persistence);
+
+  async function runNow() {
+    setRunning(true); setError(""); setStages([]);
+    try {
+      const response = await fetch("/api/committee/run", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trigger: "manual", profile }),
+      });
+      await readSse(response, (value) => setStages((current) => [...current, value as Stage]));
+      await refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Committee run failed"); }
+    finally { setRunning(false); }
+  }
+
+  async function sendMessage(event: FormEvent) {
+    event.preventDefault();
+    const text = input.trim();
+    if (!text || chatting) return;
+    setInput(""); setChatting(true); setError("");
+    const userMessage: Message = { id: crypto.randomUUID(), role: "user", text };
+    const responseId = crypto.randomUUID();
+    setMessages((current) => [...current, userMessage, { id: responseId, role: "assistant", text: "" }]);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, agent, profile, message: text }),
+      });
+      await readSse(response, (value) => {
+        if (value.type === "delta") setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: item.text + String(value.text ?? "") } : item));
+        if (value.type === "complete") setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: String(value.text ?? item.text), citations: value.citations as Citation[], model: String(value.model ?? "") } : item));
+        if (value.type === "error") throw new Error(String(value.message ?? "Agent failed"));
+      });
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Agent failed";
+      setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: message } : item));
+    } finally { setChatting(false); }
+  }
+
+  async function addTicker(event: FormEvent) {
+    event.preventDefault(); setError("");
+    const response = await fetch("/api/universe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: newTicker, region: newRegion }) });
+    const payload = await response.json() as { error?: string };
+    if (!response.ok) return setError(payload.error ?? "Unable to add ticker");
+    setNewTicker(""); await refresh();
+  }
+
+  async function changeTicker(ticker: string, statusValue: string) {
+    await fetch("/api/universe", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, status: statusValue }) });
+    await refresh();
+  }
+
+  async function removeTicker(ticker: string) {
+    await fetch(`/api/universe?ticker=${encodeURIComponent(ticker)}`, { method: "DELETE" });
+    await refresh();
+  }
+
+  function CommitteeView() {
+    return <>
+      <section className="decision-cockpit">
+        <div className="decision-copy"><div className="decision-label"><p className="eyebrow">NEXT-WEEK PAPER DECISION</p><ModeBadge mode={displayMode} /></div><h2>{latestFinal.mode ? `${displayMode} mode` : "Ready for the first committee"}</h2><p>{String(latestFinal.rationale ?? "Run the committee to combine live market data, cited research, independent Risk review, and a final CIO allocation.")}</p><div className="hero-actions"><button className="primary-action" onClick={runNow} disabled={running || !setupReady}>{running ? "Committee running" : "Run Investment Committee"}</button><span>Weekly scheduled decisions always use Pro</span></div></div>
+        <AllocationDonut stockPct={displayStockPct} cashPct={displayCashPct} label={displayMode} />
+        <div className="probability-panel"><ProbabilityBar label="US technology" value={Number(latestFinal.usUpProbability ?? 0) * 100} detail={`Expected ${Number(latestFinal.usExpectedReturnPct ?? 0).toFixed(2)}% next week`} /><ProbabilityBar label="China / HK technology" value={Number(latestFinal.chinaUpProbability ?? 0) * 100} detail={`Expected ${Number(latestFinal.chinaExpectedReturnPct ?? 0).toFixed(2)}% next week`} /><div className="data-stamp"><span>DATA AS OF</span><strong>{String(latestRun?.dataAsOf ?? "Awaiting run")}</strong><small>{stockProviderCount}/4 market sources configured</small></div></div>
+      </section>
+      {!setupReady && <div className="setup-warning"><strong>Setup incomplete</strong><span>{!status.openRouter ? "Add OPENROUTER_API_KEY to .env.local. " : ""}{!status.persistence ? "Database unavailable. " : ""}{!status.yahoo ? "Yahoo data unavailable." : ""}</span></div>}
+      {latestRun && <div className="summary-grid">
+        <article><span>US up probability</span><strong>{probability(latestFinal.usUpProbability)}</strong><small>Expected {Number(latestFinal.usExpectedReturnPct ?? 0).toFixed(2)}%</small></article>
+        <article><span>China/HK up probability</span><strong>{probability(latestFinal.chinaUpProbability)}</strong><small>Expected {Number(latestFinal.chinaExpectedReturnPct ?? 0).toFixed(2)}%</small></article>
+        <article><span>Market data</span><strong>{String(latestRun.dataAsOf ?? "Pending")}</strong><small>{latestRun.dataStale ? "Cached or stale input" : "Live Yahoo input"}</small></article>
+        <article><span>Paper NAV</span><strong>${currentNav.toFixed(2)}</strong><small>{approvedCount} approved stocks</small></article>
+      </div>}
+      <div className="committee-grid">
+        <section className="panel chat-card">
+          <div className="panel-head"><div><p className="eyebrow">LIVE AGENT</p><h3>Ask the committee</h3></div><div className="segmented">{agents.map((item) => <button className={agent === item.id ? "active" : ""} onClick={() => setAgent(item.id)} key={item.id}>{item.label}</button>)}</div></div>
+          <div className="chat-stream">{messages.map((message) => <div className={`chat-message ${message.role}`} key={message.id}><span>{message.role === "assistant" ? `${agent.toUpperCase()} AGENT` : "YOU"}</span><MarkdownMessage text={message.text || "Thinking..."} />{message.model && <small>{message.model}</small>}<Sources citations={message.citations} /></div>)}</div>
+          <form className="chat-composer" onSubmit={sendMessage}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about next week, a risk, or the allocation" /><button disabled={chatting || !setupReady}>{chatting ? "Working" : "Send"}</button></form>
+        </section>
+        <aside className="panel evidence-card">
+          <div className="panel-head"><div><p className="eyebrow">DECISION EVIDENCE</p><h3>Model council</h3></div>{Boolean(latestFinal.mode) && <ModeBadge mode={String(latestFinal.mode)} />}</div>
+          {analystScores.length ? <div className="score-list">{analystScores.map((score, index) => <div key={`${score.role}-${index}`}><span>{String(score.role)}</span><div><i style={{ width: `${Number(score.total ?? 0)}%` }} /></div><strong>{Number(score.total ?? 0).toFixed(0)}</strong></div>)}</div> : <p className="empty-copy">Scores appear after the first successful AI run.</p>}
+          <div className="market-evidence"><div><span>US 1-week return</span><strong>{percent(latestUs?.return1w)}</strong></div><div><span>China/HK 1-week return</span><strong>{percent(latestChina?.return1w)}</strong></div><div><span>Mechanical control</span><strong>{String(latestMarket.mechanicalMode ?? "Pending")}</strong></div><div><span>Data state</span><strong>{latestMarket.stale ? "Stale" : "Current"}</strong></div></div>
+          <h4>Sources</h4><Sources citations={citations} />
+        </aside>
+      </div>
+      {!!stages.length && <section className="panel stage-panel"><div className="panel-head"><h3>Run stages</h3><span>{stages.at(-1)?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
+    </>;
+  }
+
+  function WorkflowView() {
+    const workflowStages = [
+      { number: "01", name: "Market Data", owner: "Data Engine", detail: "Yahoo prices, HKD conversion, freshness checks, and the quantitative feature pack.", tone: "data" },
+      { number: "02", name: "Research", owner: profile === "flash" ? "Research Agent" : "Quant + Macro Agents", detail: profile === "flash" ? "One fast GPT-OSS 20B market opinion." : "Parallel price analysis and cited news, policy, filing, earnings, and macro research.", tone: "research" },
+      { number: "03", name: "Challenge", owner: "Risk Agent", detail: "Independent review of freshness, disagreement, liquidity, concentration, volatility, drawdown, and source quality.", tone: "risk" },
+      { number: "04", name: "Decision", owner: "CIO Agent", detail: "Scores every opinion, resolves disagreements, and chooses Attack, Balanced, or Defense.", tone: "cio" },
+      { number: "05", name: "Controls", owner: "Allocation Engine", detail: "Applies fixed mode weights, regional bounds, approved-universe rules, and the 10% security cap.", tone: "control" },
+      { number: "06", name: "Paper Action", owner: "Portfolio Engine", detail: "Records a simulated rebalance, unused stock budget as cash, transactions, and NAV history.", tone: "portfolio" },
+    ];
+    return <><section className="section-title workflow-title"><p className="eyebrow">FROM EVIDENCE TO PAPER ALLOCATION</p><h2>The complete agent workflow</h2><p>Follow each handoff from required market data through independent Risk review, the CIO decision, hard controls, and performance feedback.</p></section>
+      <div className="workflow-profile panel"><div><span>Interactive profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div><span>Weekly schedule</span><strong>Pro</strong><small>Saturday at 08:00 Singapore time</small></div><div><span>Execution scope</span><strong>Paper only</strong><small>No broker or live-trading connection</small></div></div>
+      <section className="workflow-track" aria-label="Investment committee workflow">{workflowStages.map((stage, index) => <article className={`workflow-step workflow-${stage.tone}`} key={stage.number}><div className="workflow-step-head"><b>{stage.number}</b><span>{stage.name}</span></div><h3>{stage.owner}</h3><p>{stage.detail}</p>{index < workflowStages.length - 1 && <i className="workflow-arrow" aria-hidden="true">↓</i>}</article>)}</section>
+      <section className="workflow-branches"><article className="panel"><div className="panel-head"><div><p className="eyebrow">DATA SAFETY GATE</p><h3>Freshness decides whether work continues</h3></div><span className="status-pill status-approved">Hard control</span></div><div className="branch-grid"><div><b>Fresh or valid cache</b><span>Continue through Research, Risk, CIO, and allocation.</span></div><div className="branch-freeze"><b>Older than five trading days</b><span>Freeze the paper portfolio and record the stale-data warning.</span></div></div></article><article className="panel"><div className="panel-head"><div><p className="eyebrow">HUMAN ELIGIBILITY GATE</p><h3>AI candidates require approval</h3></div><span className="status-pill status-pending">Approval required</span></div><div className="branch-grid"><div><b>Approved</b><span>The security enters the eligible US or China/HK universe.</span></div><div><b>Pending or disabled</b><span>The security may appear in research and receives zero portfolio weight.</span></div></div></article></section>
+      <section className="panel feedback-panel"><div className="panel-head"><div><p className="eyebrow">LEARNING LOOP</p><h3>Performance returns to the Risk Agent</h3></div><span>{Number(risk.observations ?? 0)} observations</span></div><div className="feedback-flow"><span>Paper NAV</span><i>→</i><span>Performance metrics</span><i>→</i><span>Risk review</span><i>→</i><span>Three experiments</span><i>→</i><span>Next committee</span></div><p>CAGR, volatility, Sharpe, Sortino, drawdown, cash drag, turnover, regional attribution, hit rate, Brier score, and expected-return error are compared with the mechanical and fully invested controls.</p></section>
+    </>;
+  }
+
+  function UniverseView() {
+    return <><section className="section-title"><p className="eyebrow">ELIGIBILITY CONTROL</p><h2>Approved AI technology universe</h2><p>AI candidates remain pending until you approve them. Only approved tickers can receive paper weights.</p></section>
+      <form className="ticker-form panel" onSubmit={addTicker}><label><span>Yahoo ticker</span><input value={newTicker} onChange={(event) => setNewTicker(event.target.value.toUpperCase())} placeholder="Ticker" required /></label><label><span>Market</span><select value={newRegion} onChange={(event) => setNewRegion(event.target.value as "US" | "China/HK")}><option>US</option><option>China/HK</option></select></label><button className="primary-action">Add pending ticker</button></form>
+      <div className="universe-summary"><span>{approvedCount} approved</span><span>{pendingCount} pending</span><span>{universe.filter((item) => item.status === "disabled").length} disabled</span></div>
+      <section className="panel table-panel"><table><thead><tr><th>Ticker</th><th>Market</th><th>Status</th><th>Source</th><th>Research thesis</th><th>Action</th></tr></thead><tbody>{universe.map((item) => <tr key={item.ticker}><td><strong>{item.ticker}</strong></td><td>{item.region}</td><td><span className={`status-pill status-${item.status}`}>{item.status}</span></td><td>{item.source}</td><td>{item.thesis || "Awaiting research"}</td><td><div className="row-actions">{item.status !== "approved" && <button onClick={() => changeTicker(item.ticker, "approved")}>Approve</button>}{item.status === "approved" && <button onClick={() => changeTicker(item.ticker, "disabled")}>Disable</button>}<button className="danger" onClick={() => removeTicker(item.ticker)}>Delete</button></div></td></tr>)}</tbody></table>{!universe.length && <p className="empty-copy table-empty">The universe starts empty. Add tickers or approve AI candidates after a Pro run.</p>}</section>
+    </>;
+  }
+
+  function PortfolioView() {
+    const positions = portfolio.positions ?? [];
+    return <><section className="section-title"><p className="eyebrow">SIMULATED CAPITAL</p><h2>Paper portfolio</h2><p>No broker connection exists. Unallocatable stock budgets remain in cash.</p></section>
+      <section className="portfolio-overview panel"><AllocationDonut stockPct={Number(latestDecision?.stockPct ?? 0)} cashPct={Number(latestDecision?.cashPct ?? 100)} label={String(latestDecision?.mode ?? "Cash")} /><div className="portfolio-brief"><span>Current mandate</span><h3>{String(latestDecision?.mode ?? "Cash protection")}</h3><p>{positions.length ? `${positions.length} approved holdings are active in the simulated portfolio.` : "The approved universe has no active allocation. Capital remains protected in cash."}</p><div><b>US sleeve {Number(latestDecision?.usSleevePct ?? 0).toFixed(0)}%</b><b>China/HK sleeve {Number(latestDecision?.chinaSleevePct ?? 0).toFixed(0)}%</b></div></div></section>
+      <div className="summary-grid"><article><span>Current NAV</span><strong>${currentNav.toFixed(2)}</strong></article><article><span>Mode</span><strong>{String(latestDecision?.mode ?? "Cash")}</strong></article><article><span>Stock weight</span><strong>{Number(latestDecision?.stockPct ?? 0).toFixed(1)}%</strong></article><article><span>Cash weight</span><strong>{Number(latestDecision?.cashPct ?? 100).toFixed(1)}%</strong></article></div>
+      <section className="panel table-panel"><table><thead><tr><th>Ticker</th><th>Market</th><th>Weight</th><th>Reference price</th></tr></thead><tbody>{positions.map((position) => <tr key={String(position.ticker)}><td><strong>{String(position.ticker)}</strong></td><td>{String(position.region)}</td><td>{Number(position.weightPct).toFixed(2)}%</td><td>${Number(position.lastPrice ?? 0).toFixed(2)}</td></tr>)}</tbody></table>{!positions.length && <p className="empty-copy table-empty">The portfolio is 100% cash until at least one approved ticker receives an allocation.</p>}</section>
+    </>;
+  }
+
+  function DecisionsView() {
+    const decisions = portfolio.decisions ?? [];
+    return <><section className="section-title"><p className="eyebrow">AUDIT TRAIL</p><h2>Decision journal</h2><p>Every final mode, Risk opinion, evidence source, and allocation is retained.</p></section>
+      <section className="decision-list">{decisions.map((decision) => <article className="panel" key={String(decision.id)}><div className="panel-head"><div><span>{new Date(String(decision.createdAt)).toLocaleString()}</span><h3>{String(decision.mode)}</h3></div><ModeBadge mode={String(decision.mode)} /></div><p>{String(decision.rationale)}</p><div className="decision-numbers"><span>{Number(decision.stockPct).toFixed(1)}% stocks</span><span>{Number(decision.cashPct).toFixed(1)}% cash</span><span>{Number(decision.usSleevePct).toFixed(1)}% US sleeve</span><span>{String(decision.riskOpinion)}</span></div><Sources citations={decision.citations as Citation[]} /></article>)}{!decisions.length && <p className="empty-copy">No committee decisions have been recorded.</p>}</section>
+    </>;
+  }
+
+  function PerformanceView() {
+    return <><section className="section-title"><p className="eyebrow">MEASUREMENT</p><h2>Performance and prediction quality</h2><p>Metrics become meaningful as weekly paper decisions and realized outcomes accumulate.</p></section>
+      <div className="metric-grid"><article><span>CAGR</span><strong>{percent(riskMetrics.cagr)}</strong><small>Paper NAV</small></article><article><span>Annual volatility</span><strong>{percent(riskMetrics.annualizedVolatility)}</strong><small>Weekly observations</small></article><article><span>Sharpe</span><strong>{Number(riskMetrics.sharpe ?? 0).toFixed(2)}</strong><small>Cash return assumed at zero</small></article><article><span>Maximum drawdown</span><strong>{percent(riskMetrics.maximumDrawdown)}</strong><small>Peak-to-trough paper NAV</small></article><article><span>Prediction hit rate</span><strong>{riskMetrics.predictionHitRate == null ? "Pending" : percent(riskMetrics.predictionHitRate)}</strong></article><article><span>Brier score</span><strong>{riskMetrics.brierScore == null ? "Pending" : Number(riskMetrics.brierScore).toFixed(3)}</strong></article><article><span>Turnover</span><strong>{percent(riskMetrics.turnover)}</strong><small>Cumulative one-way turnover</small></article><article><span>Cash drag</span><strong>{percent(riskMetrics.cashDrag)}</strong><small>Versus the stock control</small></article><article><span>Mechanical control</span><strong>{percent(riskBaseline.mechanicalTrendReturn)}</strong><small>{Number(riskBaseline.periods ?? 0)} periods</small></article><article><span>Fully invested control</span><strong>{percent(riskBaseline.fullyInvestedStockReturn)}</strong><small>Equal-weighted market proxies</small></article></div>
+      <section className="panel"><h3>NAV history</h3><div className="nav-bars">{nav.map((item) => <div key={String(item.date)}><i style={{ height: `${Math.max(8, Number(item.nav) / Math.max(...nav.map((row) => Number(row.nav))) * 100)}%` }} /><span>{String(item.date).slice(5)}</span></div>)}</div></section>
+    </>;
+  }
+
+  function RiskView() {
+    return <><section className="section-title"><p className="eyebrow">INDEPENDENT CHALLENGE</p><h2>Risk Agent review</h2><p>The Risk Agent reviews evidence, data freshness, model disagreement, concentration, volatility, and decision quality.</p></section>
+      <div className="risk-layout"><section className="panel"><div className="panel-head"><h3>Current controls</h3><span className="status-pill status-approved">Enforced in code</span></div><ul className="control-list"><li>No broker or live-trading connection</li><li>Maximum 10% NAV per approved security</li><li>US and China/HK sleeve bounds of 35% to 65%</li><li>Stock and cash weights total 100%</li><li>Portfolio freeze beyond five stale trading days</li><li>Candidate stocks require human approval</li></ul></section><section className="panel"><div className="panel-head"><h3>Latest improvement priorities</h3><span>{Number(risk.observations ?? 0)} observations</span></div><ol className="experiment-list">{improvementExperiments.length ? improvementExperiments.slice(0, 3).map((experiment, index) => <li key={index}><strong>{String(experiment.objective)}</strong><span>{String(experiment.test)} Success: {String(experiment.successMeasure)}</span></li>) : <><li><strong>Improve Sharpe</strong><span>Compare the fusion committee with the mechanical control on identical data.</span></li><li><strong>Lower volatility</strong><span>Test volatility-aware security weights and regional stress cases.</span></li><li><strong>Improve calibration</strong><span>Track hit rate, Brier score, and expected-return error weekly.</span></li></>}</ol></section></div>
+    </>;
+  }
+
+  const content = view === "committee" ? CommitteeView() : view === "workflow" ? WorkflowView() : view === "universe" ? UniverseView() : view === "portfolio" ? PortfolioView() : view === "decisions" ? DecisionsView() : view === "performance" ? PerformanceView() : RiskView();
+
+  return <main className="app-shell">
+    <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="profile-picker" aria-label="Model profile">{(Object.keys(profiles) as Profile[]).map((key) => <button className={profile === key ? "active" : ""} onClick={() => setProfile(key)} key={key}><strong>{profiles[key].label}</strong><span>{profiles[key].detail}</span></button>)}</div><div className="live-state"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span></div></header>
+    <div className="app-grid"><aside className="sidebar"><nav>{(["Decide", "Manage", "Review"] as const).map((group) => <div className="nav-group" key={group}><span>{group}</span>{views.filter((item) => item.group === group).map((item) => <button className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><em>{item.shortLabel}</em>{item.id === "universe" && pendingCount > 0 && <b>{pendingCount}</b>}</button>)}</div>)}</nav><div className="profile-note"><span>Active intelligence profile</span><strong>{profiles[profile].label}</strong><small>{profiles[profile].description}</small></div><div className="system-check"><span><i className={status.openRouter ? "ok" : ""} />AI committee</span><span><i className={status.yahoo ? "ok" : ""} />Market data {stockProviderCount}/4</span><span><i className={status.persistence ? "ok" : ""} />Decision history</span><span><i className={status.scheduler ? "ok" : ""} />Weekly automation</span></div><p className="simulation-label">SIMULATED PORTFOLIO ONLY</p></aside>
+      <section className="content"><div className="page-context"><span>{currentView.group}</span><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Setup required"}</small></div>{loading ? <div className="loading-state">Loading the committee...</div> : content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
+  </main>;
+}
