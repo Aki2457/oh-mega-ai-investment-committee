@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 type Profile = "flash" | "think" | "pro";
 type Agent = "research" | "cio" | "risk";
 type View = "committee" | "weather" | "workflow" | "universe" | "portfolio" | "decisions" | "performance" | "risk";
+type HqRoom = "lounge" | "research" | "risk" | "cio" | "operations";
 type Citation = { url: string; title: string; content?: string };
 type Message = { id: string; role: "user" | "assistant"; text: string; citations?: Citation[]; model?: string };
 type UniverseItem = { id: string; ticker: string; region: "US" | "China/HK"; status: string; source: string; thesis: string; citations: Citation[] };
@@ -116,6 +117,7 @@ export function ResearchChat() {
   const [view, setView] = useState<View>("committee");
   const [profile, setProfile] = useState<Profile>("think");
   const [agent, setAgent] = useState<Agent>("research");
+  const [hqRoom, setHqRoom] = useState<HqRoom>("lounge");
   const [status, setStatus] = useState<Record<string, unknown>>({});
   const [universe, setUniverse] = useState<UniverseItem[]>([]);
   const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
@@ -302,23 +304,27 @@ export function ResearchChat() {
     const characters: Array<{ id: Agent; name: string; role: string }> = [{ id: "research", name: "Mika", role: "Research" }, { id: "risk", name: "Rex", role: "Risk" }, { id: "cio", name: "Nova", role: "CIO" }];
     const usProbability = Number(latestFinal.usUpProbability ?? 0) * 100;
     const chinaProbability = Number(latestFinal.chinaUpProbability ?? 0) * 100;
+    const roomNames: Array<{ id: HqRoom; label: string; icon: string }> = [{ id: "lounge", label: "Living Room", icon: "⌂" }, { id: "research", label: "Research Lab", icon: "⌕" }, { id: "risk", label: "Risk Room", icon: "!" }, { id: "cio", label: "CIO Office", icon: "Ω" }, { id: "operations", label: "Operations", icon: "▦" }];
+    const cast = <div className="character-row">{characters.map((character) => <button className={`jrpg-character character-${character.id} ${activeCharacter === character.id ? "active walking" : ""}`} onClick={() => setAgent(character.id)} aria-pressed={agent === character.id} key={character.id}><span className="pixel-person" aria-hidden="true"><i className="pixel-hair" /><i className="pixel-head"><b className="pixel-eye left" /><b className="pixel-eye right" /><b className="pixel-mouth" /></i><i className="pixel-body" /><i className="pixel-arm left" /><i className="pixel-arm right" /><i className="pixel-leg left" /><i className="pixel-leg right" /></span><strong>{character.name}</strong><small>{character.role}</small>{activeCharacter === character.id && <em>!</em>}</button>)}</div>;
     return <section className={`living-room ${running || chatting ? "room-live" : ""}`} aria-label="OH MEGA interactive agent living room">
-      <div className="room-help"><strong>Explore the command room</strong><span>Select a character to ask an agent. Select a glowing workstation to open its full dashboard.</span></div>
-      <div className="room-wall">
+      <div className="room-help"><div><strong>OH MEGA Headquarters</strong><span>Select a room, character, or glowing workstation to explore live fund data.</span></div><nav className="room-nav" aria-label="Headquarters rooms">{roomNames.map((room) => <button className={hqRoom === room.id ? "active" : ""} onClick={() => setHqRoom(room.id)} aria-pressed={hqRoom === room.id} key={room.id}><i>{room.icon}</i><span>{room.label}</span></button>)}</nav></div>
+      {hqRoom === "lounge" && <><div className="room-wall room-lounge-wall">
         <button className="room-window room-hotspot" onClick={() => setView("weather")} aria-label="Open Fund Weather"><i /><i /><span>{weatherMode.toUpperCase()} · {Number(weather.cashPct ?? 100).toFixed(0)}% CASH</span></button>
         <div className="room-clock"><b>Ω</b></div>
         <button className="room-picture room-hotspot" onClick={() => setView("decisions")}>DECISION<br />JOURNAL</button>
         <button className="room-market-screen room-hotspot" onClick={() => setView("performance")}><span>WEEKLY SIGNALS</span><b>US {usProbability.toFixed(0)}%</b><b>HK {chinaProbability.toFixed(0)}%</b><small>Open performance ↗</small></button>
-      </div>
-      <div className="room-floor">
+      </div><div className="room-floor room-lounge-floor">
         <button className="room-sofa room-hotspot" onClick={() => setView("committee")} aria-label="Open committee home"><span>COMMITTEE TABLE</span></button>
         <button className="room-table room-hotspot" onClick={() => setView("workflow")}><span>WEEKLY<br />WORKFLOW</span></button>
         <button className="room-risk-desk room-hotspot" onClick={() => setView("risk")}><span>RISK</span><b>{String(latestDecision?.riskOpinion ?? "Review")}</b></button>
         <button className="room-portfolio-console room-hotspot" onClick={() => setView("portfolio")}><span>PAPER PORTFOLIO</span><b>${currentNav.toFixed(2)}</b><small>{displayStockPct.toFixed(0)}% stocks · {displayCashPct.toFixed(0)}% cash</small></button>
         <button className="room-universe-cabinet room-hotspot" onClick={() => setView("universe")}><i /><i /><span>{approvedCount} APPROVED</span><small>{pendingCount} pending</small></button>
-        <div className="room-plant"><i /><i /><i /><b /></div>
-        <div className="character-row">{characters.map((character) => <button className={`jrpg-character character-${character.id} ${activeCharacter === character.id ? "active walking" : ""}`} onClick={() => setAgent(character.id)} aria-pressed={agent === character.id} key={character.id}><span className="pixel-person" aria-hidden="true"><i className="pixel-hair" /><i className="pixel-head"><b className="pixel-eye left" /><b className="pixel-eye right" /><b className="pixel-mouth" /></i><i className="pixel-body" /><i className="pixel-arm left" /><i className="pixel-arm right" /><i className="pixel-leg left" /><i className="pixel-leg right" /></span><strong>{character.name}</strong><small>{character.role}</small>{activeCharacter === character.id && <em>!</em>}</button>)}</div>
-      </div>
+        <div className="room-plant"><i /><i /><i /><b /></div>{cast}
+      </div></>}
+      {hqRoom === "research" && <div className="hq-special-room research-lab"><div className="room-title-sign"><span>MIKA'S RESEARCH LAB</span><small>Prices, predictions, and cited evidence</small></div><button className="lab-screen room-hotspot" onClick={() => setView("performance")}><span>NEXT WEEK</span><div><b>US TECH</b><strong>{usProbability.toFixed(0)}%</strong></div><div><b>CHINA / HK</b><strong>{chinaProbability.toFixed(0)}%</strong></div><small>Probability of a positive return</small></button><button className="lab-terminal room-hotspot" onClick={() => setView("workflow")}><span>DATA ENGINE</span><b>{String(latestRun?.dataAsOf ?? "Awaiting run")}</b><small>{latestRun?.dataStale ? "Cached data warning" : `${stockProviderCount}/4 sources configured`}</small></button><button className="lab-files room-hotspot" onClick={() => setView("decisions")}><b>{citations.length}</b><span>CITED SOURCES</span></button>{cast}</div>}
+      {hqRoom === "risk" && <div className="hq-special-room risk-room"><div className="room-title-sign"><span>REX'S RISK ROOM</span><small>Independent challenge and hard controls</small></div><button className="risk-main-board room-hotspot" onClick={() => setView("risk")}><span>LATEST OPINION</span><strong>{String(latestDecision?.riskOpinion ?? "Awaiting review")}</strong><small>Open full Risk review</small></button><div className="risk-control-rack"><span>POSITION CAP</span><b>10%</b><span>STALE DATA</span><b>FREEZE</b><span>ACTIVE MODS</span><b>{activeMods.length}</b></div><button className="risk-metric-screen room-hotspot" onClick={() => setView("performance")}><span>MAX DRAWDOWN</span><b>{percent(riskMetrics.maximumDrawdown)}</b><small>Volatility {percent(riskMetrics.annualizedVolatility)}</small></button>{cast}</div>}
+      {hqRoom === "cio" && <div className="hq-special-room cio-office"><div className="room-title-sign"><span>NOVA'S CIO OFFICE</span><small>Mode, allocation, and final judgment</small></div><button className="cio-mode-board room-hotspot" onClick={() => setView("weather")}><span>CURRENT GEAR</span><strong>{weatherMode}</strong><div><b>{displayStockPct.toFixed(0)}% stocks</b><b>{displayCashPct.toFixed(0)}% cash</b></div></button><button className="cio-briefing room-hotspot" onClick={() => setView("decisions")}><span>LATEST DECISION</span><p>{String(latestFinal.rationale ?? latestDecision?.rationale ?? "Run the committee to prepare the first decision brief.")}</p></button><button className="cio-run-desk room-hotspot" onClick={runNow} disabled={running || !setupReady}><span>{running ? "COMMITTEE RUNNING" : "CALL COMMITTEE"}</span><b>▶</b></button>{cast}</div>}
+      {hqRoom === "operations" && <div className="hq-special-room operations-room"><div className="room-title-sign"><span>PORTFOLIO OPERATIONS</span><small>Paper positions, cash, universe, and records</small></div><button className="ops-nav-screen room-hotspot" onClick={() => setView("portfolio")}><span>PAPER NAV</span><strong>${currentNav.toFixed(2)}</strong><small>{portfolio.positions?.length ?? 0} active positions</small></button><button className="ops-allocation room-hotspot" onClick={() => setView("portfolio")}><span>ALLOCATION</span><b>{displayStockPct.toFixed(0)} / {displayCashPct.toFixed(0)}</b><small>Stocks / cash</small></button><button className="ops-universe room-hotspot" onClick={() => setView("universe")}><span>ELIGIBLE UNIVERSE</span><b>{approvedCount}</b><small>{pendingCount} pending approval</small></button><button className="ops-ledger room-hotspot" onClick={() => setView("decisions")}><span>DECISION LEDGER</span><b>{portfolio.decisions?.length ?? 0}</b><small>Recorded decisions</small></button>{cast}</div>}
       <div className={`jrpg-dialogue portrait-${activeCharacter ?? agent}`}><i className="dialogue-portrait" aria-hidden="true" /><div><b>{busyLabel(running, chatting)}</b><p>{dialogue}</p></div><span>▼</span></div>
     </section>;
   }
