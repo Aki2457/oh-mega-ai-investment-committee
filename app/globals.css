@@ -98,6 +98,26 @@ button:focus, a:focus, input:focus, select:focus { outline: 3px solid #f2c45f; o
 .page-context span::after { content: "/"; margin-left: 9px; color: #a9b5bd; }
 .page-context strong { font-size: 12px; }
 .page-context small { margin-left: auto; color: var(--muted); font-size: 10px; }
+.committee-pet { margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 16px; background: white; display: flex; align-items: center; gap: 14px; box-shadow: 0 6px 20px rgba(7,26,44,.04); }
+.pet-avatar { width: 58px; height: 52px; flex: 0 0 auto; position: relative; animation: pet-float 3s ease-in-out infinite; }
+.pet-face { width: 52px; height: 44px; border: 2px solid #a8caba; border-radius: 21px 21px 18px 18px; background: #e7f8ef; display: flex; align-items: center; justify-content: center; gap: 12px; position: absolute; bottom: 0; left: 3px; }
+.pet-ear { width: 17px; height: 20px; border: 2px solid #a8caba; background: #e7f8ef; position: absolute; top: 0; z-index: 0; transform: rotate(35deg); border-radius: 10px 10px 3px; }
+.pet-ear-left { left: 5px; transform: rotate(-35deg); }
+.pet-ear-right { right: 5px; }
+.pet-face b { width: 6px; height: 8px; border-radius: 50%; background: var(--navy); animation: pet-blink 4.5s infinite; }
+.pet-face span { width: 8px; height: 4px; border-bottom: 2px solid var(--green-dark); border-radius: 50%; position: absolute; bottom: 9px; }
+.pet-avatar em { color: var(--green-dark); font: 700 11px Georgia,serif; position: absolute; left: 24px; top: 16px; z-index: 2; }
+.pet-thought { min-width: 0; display: grid; gap: 3px; }
+.pet-thought > span { color: var(--green-dark); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.pet-thought > strong { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.thinking-dots { display: flex; gap: 4px; margin-top: 2px; }
+.thinking-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--green-dark); animation: thinking-dot 1s ease-in-out infinite; }
+.thinking-dots i:nth-child(2) { animation-delay: .15s; }
+.thinking-dots i:nth-child(3) { animation-delay: .3s; }
+.pet-working { border-color: #9ed4b8; background: #f6fcf8; }
+.pet-working .pet-avatar { animation-duration: 1.2s; }
+.pet-locked .pet-face, .pet-locked .pet-ear { border-color: #627482; background: #e6eaed; }
+.pet-careful .pet-face, .pet-careful .pet-ear { border-color: #9db8cc; background: #eaf3f8; }
 .section-title { max-width: 850px; margin-bottom: 25px; }
 .section-title h2, .hero-row h2 { margin: 0; font-size: clamp(30px, 4vw, 48px); font-weight: 500; letter-spacing: -.04em; }
 .section-title > p:last-child, .hero-row > div > p:last-child { margin: 9px 0 0; color: var(--muted); line-height: 1.5; }
@@ -374,6 +394,18 @@ td { font-size: 12px; line-height: 1.4; }
 @keyframes stage-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(50,210,127,0); }
   50% { box-shadow: 0 0 0 4px rgba(50,210,127,.12); }
+}
+@keyframes pet-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes pet-blink {
+  0%, 46%, 50%, 100% { transform: scaleY(1); }
+  48% { transform: scaleY(.12); }
+}
+@keyframes thinking-dot {
+  0%, 100% { opacity: .25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
 }
 
 @media (max-width: 1100px) {

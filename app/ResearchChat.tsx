@@ -130,6 +130,7 @@ export function ResearchChat() {
     { id: "welcome", role: "assistant", text: "Select an agent and ask a question. Every live answer requires real Yahoo data, and current questions can use web search." },
   ]);
   const [chatting, setChatting] = useState(false);
+  const [chatStage, setChatStage] = useState("");
   const [sessionId] = useState(makeId);
   const [newTicker, setNewTicker] = useState("");
   const [newRegion, setNewRegion] = useState<"US" | "China/HK">("US");
@@ -215,7 +216,7 @@ export function ResearchChat() {
     event.preventDefault();
     const text = input.trim();
     if (!text || chatting) return;
-    setInput(""); setChatting(true); setError("");
+    setInput(""); setChatting(true); setChatStage("Preparing live market context"); setError("");
     const userMessage: Message = { id: makeId(), role: "user", text };
     const responseId = makeId();
     setMessages((current) => [...current, userMessage, { id: responseId, role: "assistant", text: "" }]);
@@ -224,14 +225,23 @@ export function ResearchChat() {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, agent, profile, message: text }),
       });
       await readSse(response, (value) => {
-        if (value.type === "delta") setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: item.text + String(value.text ?? "") } : item));
+        if (value.type === "stage") setChatStage(String(value.message ?? "Working"));
+        if (value.type === "delta") { setChatStage("Writing the answer"); setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: item.text + String(value.text ?? "") } : item)); }
         if (value.type === "complete") setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: String(value.text ?? item.text), citations: value.citations as Citation[], model: String(value.model ?? "") } : item));
         if (value.type === "error") throw new Error(String(value.message ?? "Agent failed"));
       });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Agent failed";
       setMessages((current) => current.map((item) => item.id === responseId ? { ...item, text: message } : item));
-    } finally { setChatting(false); }
+    } finally { setChatting(false); setChatStage(""); }
+  }
+
+  function CommitteePet() {
+    const committeeStage = stages[stages.length - 1];
+    const busy = running || chatting;
+    const mood = weatherMode === "Lockdown" ? "locked" : busy ? "working" : weatherMode === "Attack" ? "bright" : weatherMode === "Defense" ? "careful" : "calm";
+    const message = running ? committeeStage?.message ?? "Starting the investment committee" : chatting ? chatStage || `${agent} agent is working` : weatherMode === "Lockdown" ? "Lockdown is active. I am watching the controls." : `I am watching the ${weatherMode} portfolio.`;
+    return <section className={`committee-pet pet-${mood}`} aria-live="polite" aria-label="OH MEGA committee activity"><div className="pet-avatar" aria-hidden="true"><i className="pet-ear pet-ear-left" /><i className="pet-ear pet-ear-right" /><div className="pet-face"><b /><b /><span /></div><em>Ω</em></div><div className="pet-thought"><span>{running ? "COMMITTEE LIVE" : chatting ? `${agent.toUpperCase()} AGENT LIVE` : "OMEGA IS WATCHING"}</span><strong>{message}</strong>{busy && <div className="thinking-dots" aria-hidden="true"><i /><i /><i /></div>}</div></section>;
   }
 
   async function addTicker(event: FormEvent) {
@@ -354,6 +364,6 @@ export function ResearchChat() {
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><label className="profile-picker"><span>AI depth</span><select value={profile} onChange={(event) => setProfile(event.target.value as Profile)}><option value="flash">Flash · fastest</option><option value="think">Think · standard</option><option value="pro">Pro · deepest</option></select></label><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span><b>SIMULATED</b></div></header>
     <nav className="primary-bar" aria-label="Primary navigation"><div>{primaryNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><i aria-hidden="true">{item.icon}</i><span>{item.id === "committee" ? "Home" : item.shortLabel}</span></button>)}</div><details className="advanced-menu" open={advancedNavigation.some((item) => item.id === view)}><summary>More</summary><div>{advancedNavigation.map((item) => <button className={view === item.id ? "active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)} key={item.id}><span>{item.shortLabel}</span>{item.id === "universe" && pendingCount > 0 && <b aria-label={`${pendingCount} pending`}>{pendingCount}</b>}</button>)}</div></details></nav>
-    <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}><div className="page-context"><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div>{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
+    <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}><div className="page-context"><strong>{currentView.label}</strong><small>{setupReady ? "Live system" : "Connecting"}</small></div><CommitteePet />{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }
