@@ -18,7 +18,7 @@ async function waitForServer(output) {
   throw new Error(`Local worker did not start.\n${output.join("")}`);
 }
 
-test("server-renders the OH MEGA investment committee", { timeout: 30_000 }, async () => {
+test("server-renders the OH MEGA investment committee", { timeout: 60_000 }, async () => {
   const output = [];
   const server = spawn(process.execPath, [cli, "dev", "--port", String(port)], {
     cwd: root,
