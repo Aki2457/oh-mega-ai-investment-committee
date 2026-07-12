@@ -17,7 +17,7 @@ const final: FinalDecision = {
 };
 
 function pack(approved: MarketPack["approvedTickers"], features: MarketFeatures[]): MarketPack {
-  return { generatedAt: "2026-07-11T00:00:00Z", dataAsOf: "2026-07-10", stale: false, frozen: false, mechanicalMode: "Attack", approvedTickers: approved, features, providerChecks: [] };
+  return { generatedAt: "2026-07-11T00:00:00Z", dataAsOf: "2026-07-10", stale: false, frozen: false, mechanicalMode: "Attack", approvedTickers: approved, features, providerChecks: [], warnings: [] };
 }
 
 test("keeps an empty approved universe fully in cash", () => {

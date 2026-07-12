@@ -12,6 +12,7 @@ const pack: MarketPack = {
   approvedTickers: [],
   features: [],
   providerChecks: [],
+  warnings: [],
 };
 
 test("validates mocked Flash, Think, and Pro committee outputs", async () => {

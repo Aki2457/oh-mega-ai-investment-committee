@@ -85,12 +85,19 @@ export async function buildMarketPack(): Promise<MarketPack> {
   ];
   const unique = Array.from(new Map(requested.map((item) => [item.ticker, item])).values());
   const series = new Map<string, YahooSeries>();
+  const warnings: string[] = [];
+  const requiredTickers = new Set(["QQQ", "3067.HK", "HKD=X", ...held.map((item) => item.ticker)]);
   for (const item of unique) {
-    series.set(item.ticker, await fetchYahooSeries(item.ticker));
+    try {
+      series.set(item.ticker, await fetchYahooSeries(item.ticker));
+    } catch (error) {
+      if (requiredTickers.has(item.ticker)) throw error;
+      warnings.push(`${item.ticker} was excluded because valid market history was unavailable.`);
+    }
     await pause(200);
   }
   const providerChecks = [];
-  for (const item of unique.filter((entry) => entry.ticker !== "HKD=X")) {
+  for (const item of unique.filter((entry) => entry.ticker !== "HKD=X" && series.has(entry.ticker))) {
     const latest = series.get(item.ticker)!.points.at(-1)!;
     providerChecks.push(await crossCheckQuote(item.ticker, item.region, latest.adjustedClose, latest.date));
   }
@@ -102,7 +109,7 @@ export async function buildMarketPack(): Promise<MarketPack> {
   const usFeature = calculateFeatures("QQQ", "US", "USD", usProxy.points, usProxy.points, usProxy.source);
   const chinaFeature = calculateFeatures("3067.HK", "China/HK", "USD", chinaUsd.points, chinaUsd.points, chinaRaw.source);
   features.push(usFeature, chinaFeature);
-  const stockItems = Array.from(new Map([...approved, ...held].map((item) => [item.ticker, item])).values());
+  const stockItems = Array.from(new Map([...approved, ...held].map((item) => [item.ticker, item])).values()).filter((item) => series.has(item.ticker));
   for (const item of stockItems) {
     const raw = series.get(item.ticker)!;
     const points = item.region === "China/HK" ? convertToUsd(raw.points, fx.points) : raw.points;
@@ -117,8 +124,9 @@ export async function buildMarketPack(): Promise<MarketPack> {
     stale: maximumAge > 0 || features.some((feature) => feature.source === "cache"),
     frozen: maximumAge > 5,
     mechanicalMode: mechanicalMode(usFeature, chinaFeature),
-    approvedTickers: approved.map((item) => ({ ticker: item.ticker, region: item.region })),
+    approvedTickers: approved.filter((item) => series.has(item.ticker)).map((item) => ({ ticker: item.ticker, region: item.region })),
     features,
     providerChecks,
+    warnings,
   };
 }

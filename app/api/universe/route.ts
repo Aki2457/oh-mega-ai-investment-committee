@@ -1,4 +1,5 @@
 import { deleteUniverse, listUniverse, updateUniverse, upsertUniverse } from "@/db/repository";
+import { fetchYahooSeries } from "@/lib/market-data";
 import type { Region } from "@/lib/types";
 
 function validTicker(value: string) {
@@ -16,6 +17,8 @@ export async function POST(request: Request) {
     const ticker = payload.ticker?.trim().toUpperCase() ?? "";
     if (!validTicker(ticker)) return Response.json({ error: "Enter a valid Yahoo ticker" }, { status: 400 });
     if (!(["US", "China/HK"] as string[]).includes(payload.region ?? "")) return Response.json({ error: "Region must be US or China/HK" }, { status: 400 });
+    try { await fetchYahooSeries(ticker); }
+    catch { return Response.json({ error: `${ticker} has no valid Yahoo market history. Check the exchange ticker.` }, { status: 400 }); }
     return Response.json({ item: await upsertUniverse({ ticker, region: payload.region!, status: "pending", source: "user", thesis: payload.thesis ?? "" }) }, { status: 201 });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Unable to add ticker" }, { status: 500 }); }
 }
@@ -25,6 +28,10 @@ export async function PATCH(request: Request) {
     const payload = await request.json() as { ticker?: string; status?: string; thesis?: string; region?: Region };
     if (!payload.ticker) return Response.json({ error: "ticker is required" }, { status: 400 });
     if (payload.status && !["pending", "approved", "disabled"].includes(payload.status)) return Response.json({ error: "Invalid status" }, { status: 400 });
+    if (payload.status === "approved") {
+      try { await fetchYahooSeries(payload.ticker.toUpperCase()); }
+      catch { return Response.json({ error: `${payload.ticker.toUpperCase()} has no valid Yahoo market history. Check the exchange ticker.` }, { status: 400 }); }
+    }
     return Response.json({ item: await updateUniverse(payload.ticker, payload) });
   } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Unable to update ticker" }, { status: 500 }); }
 }

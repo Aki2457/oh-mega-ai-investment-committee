@@ -54,6 +54,7 @@ export type MarketPack = {
     maximumDifferencePct: number;
     agreement: "confirmed" | "warning" | "yahoo-only";
   }>;
+  warnings: string[];
 };
 
 export type CandidateStock = {
