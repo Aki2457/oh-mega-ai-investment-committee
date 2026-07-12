@@ -11,6 +11,7 @@ export async function GET() {
   return Response.json({
     openRouter: openRouterConfigured(), yahoo, persistence,
     scheduler: Boolean(process.env.COMMITTEE_SCHEDULER_TOKEN),
+    weeklySchedule: "Saturday 08:00 Asia/Singapore",
     port: 8888,
     simulatedOnly: true,
     stockData: configuredStockProviders(),

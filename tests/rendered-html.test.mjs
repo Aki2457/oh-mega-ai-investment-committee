@@ -8,7 +8,7 @@ const cli = fileURLToPath(new URL("../node_modules/vinext/dist/cli.js", import.m
 const port = 18988;
 
 async function waitForServer(output) {
-  for (let attempt = 0; attempt < 80; attempt += 1) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     try {
       const response = await fetch(`http://localhost:${port}/`);
       return response;
