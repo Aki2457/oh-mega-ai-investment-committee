@@ -264,6 +264,7 @@ export function ResearchChat() {
 
   function CommitteeView() {
     return <>
+      <LivingRoom />
       <WeatherStrip />
       <section className="decision-cockpit">
         <div className="decision-copy"><div className="decision-label"><p className="eyebrow">NEXT-WEEK PAPER DECISION</p><ModeBadge mode={displayMode} /></div><h2>{latestFinal.mode ? `${displayMode} mode` : "Ready for the first committee"}</h2><p>{String(latestFinal.rationale ?? "Run the committee to combine live market data, cited research, independent Risk review, and a final CIO allocation.")}</p><div className="hero-actions"><button className="primary-action" onClick={runNow} disabled={running || !setupReady}>{running ? "Committee running" : "Run Investment Committee"}</button><span>Weekly scheduled decisions always use Pro</span></div></div>
@@ -292,6 +293,20 @@ export function ResearchChat() {
       </div>
       {!!stages.length && <section className="panel stage-panel" aria-live="polite"><div className="panel-head"><h3>Run stages</h3><span>{stages[stages.length - 1]?.stage}</span></div><ol>{stages.map((stage, index) => <li className={index === stages.length - 1 ? "active" : ""} key={`${stage.stage}-${index}`}><b>{index + 1}</b><div><strong>{stage.stage}</strong><span>{stage.message}</span></div></li>)}</ol></section>}
     </>;
+  }
+
+  function LivingRoom() {
+    const currentStage = stages[stages.length - 1]?.stage;
+    const activeCharacter = chatting ? agent : running ? (["risk"].includes(String(currentStage)) ? "risk" : ["judge", "rebalance", "complete"].includes(String(currentStage)) ? "cio" : "research") : null;
+    const dialogue = chatting ? `${agent === "research" ? "Mika" : agent === "risk" ? "Rex" : "Nova"}: ${chatStage || "Let me check the evidence..."}` : running ? `${activeCharacter === "risk" ? "Rex" : activeCharacter === "cio" ? "Nova" : "Mika"}: ${stages[stages.length - 1]?.message || "The weekly meeting is starting."}` : `Nova: Welcome home. Fund Weather is ${weatherMode}, with ${Number(weather.stockPct ?? 0).toFixed(0)}% in stocks.`;
+    const characters: Array<{ id: Agent; name: string; role: string }> = [{ id: "research", name: "Mika", role: "Research" }, { id: "risk", name: "Rex", role: "Risk" }, { id: "cio", name: "Nova", role: "CIO" }];
+    return <section className="living-room" aria-label="OH MEGA agent living room"><div className="room-wall"><div className="room-window"><i /><i /><span>MARKET</span></div><div className="room-clock"><b>Ω</b></div><div className="room-picture">AI<br />CAPITAL</div></div><div className="room-floor"><div className="room-sofa" /><div className="room-table"><span>WEEKLY<br />PLAN</span></div><div className="room-plant"><i /><i /><i /><b /></div><div className="character-row">{characters.map((character) => <button className={`jrpg-character character-${character.id} ${activeCharacter === character.id ? "active" : ""}`} onClick={() => setAgent(character.id)} aria-pressed={agent === character.id} key={character.id}><span className="pixel-person"><i className="pixel-hair" /><i className="pixel-head" /><i className="pixel-body" /><i className="pixel-leg left" /><i className="pixel-leg right" /></span><strong>{character.name}</strong><small>{character.role}</small>{activeCharacter === character.id && <em>!</em>}</button>)}</div></div><div className="jrpg-dialogue"><b>{busyLabel(running, chatting)}</b><p>{dialogue}</p><span>▼</span></div></section>;
+  }
+
+  function busyLabel(committeeBusy: boolean, agentBusy: boolean) {
+    if (committeeBusy) return "WEEKLY COMMITTEE";
+    if (agentBusy) return "LIVE AGENT";
+    return "LIVING ROOM";
   }
 
   function WeatherStrip() {
