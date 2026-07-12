@@ -147,7 +147,7 @@ export async function restartRun(id: string, trigger: string, profile: Profile) 
   await ensureDatabase();
   await db().batch([
     db().prepare("DELETE FROM opinions WHERE run_id=?").bind(id),
-    db().prepare("UPDATE committee_runs SET trigger=?, profile=?, status='running', error=NULL, completed_at=NULL WHERE id=? AND status='failed'")
+    db().prepare("UPDATE committee_runs SET trigger=?, profile=?, status='running', error=NULL, completed_at=NULL WHERE id=? AND status IN ('failed', 'running')")
       .bind(trigger, profile, id),
   ]);
 }

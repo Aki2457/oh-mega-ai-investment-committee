@@ -2,6 +2,7 @@ import type { AnalystOpinion, Citation, FinalDecision, MarketPack, Profile, Risk
 import Ajv from "ajv";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS ?? 45_000);
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validators = new WeakMap<object, ReturnType<typeof ajv.compile>>();
 
@@ -124,16 +125,27 @@ async function requestOpenRouter(input: { model: string; messages: ChatMessage[]
     body.response_format = { type: "json_schema", json_schema: { name: input.schemaName, strict: true, schema: input.schema } };
   }
   if (input.webSearch) body.tools = [{ type: "openrouter:web_search", engine: "auto", search_context_size: "high", max_total_results: 8 }];
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.OH_MEGA_BASE_URL ?? "http://localhost:8888",
-      "X-Title": "OH MEGA AI Investment Committee",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(OPENROUTER_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.OH_MEGA_BASE_URL ?? "http://localhost:8888",
+        "X-Title": "OH MEGA AI Investment Committee",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(`OpenRouter timed out after ${Math.round(OPENROUTER_TIMEOUT_MS / 1000)} seconds`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
   const payload = await response.json() as { error?: { message?: string }; choices?: Array<{ message?: { content?: string; annotations?: unknown } }> };
   if (!response.ok) throw new Error(payload.error?.message ?? `OpenRouter returned ${response.status}`);
   const message = payload.choices?.[0]?.message;

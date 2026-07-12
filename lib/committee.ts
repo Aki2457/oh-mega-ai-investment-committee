@@ -76,8 +76,13 @@ export async function runCommittee(input: {
     return existing;
   }
   if (existing?.status === "running") {
-    await input.emit?.({ stage: "complete", message: "This forecast week is already running.", data: existing });
-    return existing;
+    const createdAt = Date.parse(`${existing.createdAt.replace(" ", "T")}Z`);
+    const abandoned = !Number.isFinite(createdAt) || Date.now() - createdAt > 5 * 60_000;
+    if (!abandoned) {
+      await input.emit?.({ stage: "complete", message: "This forecast week is already running.", data: existing });
+      return existing;
+    }
+    await input.emit?.({ stage: "starting", message: "Recovering an abandoned committee run." });
   }
   const runId = existing?.id ?? crypto.randomUUID();
   if (!existing) await createRun({ id: runId, forecastWeek: week, trigger: input.trigger, profile });

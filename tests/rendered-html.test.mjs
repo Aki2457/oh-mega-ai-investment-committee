@@ -32,7 +32,7 @@ test("server-renders the OH MEGA investment committee", { timeout: 30_000 }, asy
     assert.equal(response.status, 200, output.join(""));
     const html = await response.text();
     assert.match(html, /OH MEGA/i);
-    assert.match(html, /AI Investment Committee/i);
+    assert.match(html, /Investment Command Center/i);
     assert.match(html, /SIMULATED PORTFOLIO ONLY/i);
     assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
   } finally {
