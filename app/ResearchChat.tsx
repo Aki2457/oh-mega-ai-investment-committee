@@ -289,8 +289,20 @@ export function ResearchChat() {
     await refresh();
   }
 
+  function ActionCenter() {
+    const completedChecks = [setupReady, pendingCount === 0, Boolean(latestDecision), Boolean(latestRun && !latestRun.dataStale), (portfolio.positions?.length ?? 0) > 0, Boolean(latestRiskReview.opinion ?? latestDecision?.riskOpinion)].filter(Boolean).length;
+    const todo = [
+      ...(!setupReady ? [{ label: "Complete system setup", owner: "System", urgency: "Required", action: () => setView("workflow") }] : []),
+      ...(pendingCount > 0 ? [{ label: `Review ${pendingCount} pending stock${pendingCount === 1 ? "" : "s"}`, owner: "You", urgency: "Approval", action: () => setView("universe") }] : []),
+      ...(!latestDecision ? [{ label: "Run the Investment Committee", owner: "CIO Agent", urgency: "Next", action: runNow }] : []),
+      ...(activeMods.length > 0 ? [{ label: `Review ${activeMods.length} active modification${activeMods.length === 1 ? "" : "s"}`, owner: "You", urgency: "Control", action: () => setView("weather") }] : []),
+    ];
+    return <section className="action-center" aria-label="Weekly action and tracking center"><div className="action-center-head"><div><p className="eyebrow">WEEKLY CONTROL BOARD</p><h2>What needs attention</h2><span>Start on the left. Tap any item to act or inspect it.</span></div><div className="readiness-score"><strong>{completedChecks}/6</strong><span>checks complete</span><i><b style={{ width: `${completedChecks / 6 * 100}%` }} /></i></div></div><div className="action-columns"><section className="action-column action-now"><header><b>{todo.length}</b><div><strong>Do now</strong><span>Items needing action</span></div></header><div>{todo.length ? todo.map((item) => <button onClick={item.action} key={item.label}><i>→</i><span><strong>{item.label}</strong><small>{item.owner} · {item.urgency}</small></span></button>) : <article className="all-clear"><b>✓</b><span><strong>No urgent actions</strong><small>The weekly controls are clear.</small></span></article>}</div></section><section className="action-column action-watch"><header><b>3</b><div><strong>Keep watching</strong><span>Current fund state</span></div></header><div><button onClick={() => setView("weather")}><i>◉</i><span><strong>{weatherMode} gear</strong><small>{displayStockPct.toFixed(0)}% stocks · {displayCashPct.toFixed(0)}% cash</small></span></button><button onClick={() => setView("risk")}><i>!</i><span><strong>{String(latestDecision?.riskOpinion ?? "Risk review pending")}</strong><small>Latest Risk opinion</small></span></button><button onClick={() => setView("performance")}><i>↗</i><span><strong>{String(latestRun?.dataAsOf ?? "Data pending")}</strong><small>{latestRun?.dataStale ? "Data freshness warning" : "Latest market data"}</small></span></button></div></section><section className="action-column action-done"><header><b>{portfolio.decisions?.length ?? 0}</b><div><strong>Completed</strong><span>Recorded work</span></div></header><div><button onClick={() => setView("decisions")}><i>✓</i><span><strong>{portfolio.decisions?.length ?? 0} decisions recorded</strong><small>Permanent journal</small></span></button><button onClick={() => setView("portfolio")}><i>✓</i><span><strong>{portfolio.positions?.length ?? 0} active positions</strong><small>Paper portfolio</small></span></button><button onClick={() => goToRoom("research", "research")}><i>✓</i><span><strong>{citations.length} cited sources</strong><small>Latest committee evidence</small></span></button></div></section></div></section>;
+  }
+
   function CommitteeView() {
     return <>
+      <ActionCenter />
       <LivingRoom />
       <WeatherStrip />
       <section className="decision-cockpit">
