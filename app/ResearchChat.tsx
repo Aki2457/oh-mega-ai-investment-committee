@@ -106,7 +106,7 @@ function MarkdownMessage({ text }: { text: string }) {
 }
 
 export function ResearchChat() {
-  const [view, setView] = useState<View>("committee");
+  const [view, setViewState] = useState<View>("committee");
   const profile: Profile = "think";
   const [agent, setAgent] = useState<Agent>("cio");
   const [hqRoom, setHqRoom] = useState<HqRoom>("lounge");
@@ -134,6 +134,13 @@ export function ResearchChat() {
   const [modValue, setModValue] = useState("Balanced");
   const [modTicker, setModTicker] = useState("");
   const [modNote, setModNote] = useState("");
+
+  function setView(next: View) {
+    if (["weather", "universe", "portfolio"].includes(next)) setViewState("portfolio");
+    else if (["performance", "risk", "decisions", "workflow"].includes(next)) setViewState("performance");
+    else setViewState("committee");
+    window.setTimeout(() => document.getElementById("main-content")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+  }
 
   async function refresh() {
     const [statusResult, universeResult, historyResult, portfolioResult, riskResult, weatherResult] = await Promise.all([
@@ -174,7 +181,7 @@ export function ResearchChat() {
   const pendingCount = universe.filter((item) => item.status === "pending").length;
   const stockData = (status.stockData ?? {}) as Record<string, unknown>;
   const stockProviderCount = 1 + [stockData.massive, stockData.alphaVantage, stockData.finnhub].filter(Boolean).length;
-  const currentView = views.find((item) => item.id === view) ?? views[0];
+  const currentView = view === "performance" ? { ...views.find((item) => item.id === "performance")!, label: "Review" } : views.find((item) => item.id === view) ?? views[0];
   const latestDecision = portfolio.decisions?.[0];
   const displayMode = String(latestFinal.mode ?? latestDecision?.mode ?? "Cash");
   const displayStockPct = Number(latestDecision?.stockPct ?? (displayMode === "Attack" ? 90 : displayMode === "Balanced" ? 55 : displayMode === "Defense" ? 25 : 0));
@@ -408,12 +415,14 @@ export function ResearchChat() {
     </>;
   }
 
-  const content = view === "committee" ? CommitteeView() : view === "weather" ? WeatherView() : view === "workflow" ? WorkflowView() : view === "universe" ? UniverseView() : view === "portfolio" ? PortfolioView() : view === "decisions" ? DecisionsView() : view === "performance" ? PerformanceView() : RiskView();
+  function PortfolioPage() { return <div className="grouped-page"><section className="grouped-page-intro"><p>PAGE 2 OF 3</p><h2>Portfolio</h2><span>Current holdings first. Controls and approved stocks are grouped below.</span></section><PortfolioView /><details className="grouped-section"><summary>Position controls and modifications</summary><div><WeatherView /></div></details><details className="grouped-section"><summary>Approved stocks</summary><div><UniverseView /></div></details></div>; }
+  function ReviewPage() { return <div className="grouped-page"><section className="grouped-page-intro"><p>PAGE 3 OF 3</p><h2>Review</h2><span>Performance first. Risk, decisions, and workflow are grouped below.</span></section><PerformanceView /><details className="grouped-section"><summary>Risk review</summary><div><RiskView /></div></details><details className="grouped-section"><summary>Decision journal</summary><div><DecisionsView /></div></details><details className="grouped-section"><summary>How the committee works</summary><div><WorkflowView /></div></details></div>; }
+  const content = view === "committee" ? CommitteeView() : view === "portfolio" ? PortfolioPage() : ReviewPage();
 
   return <main className="app-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <header className="topbar"><div className="brand-lockup"><span className="omega" aria-hidden="true">Ω</span><div><p>OH MEGA CAPITAL</p><h1>Investment Command Center</h1></div></div><div className="single-profile"><span>AI MODE</span><strong>Think · Standard</strong></div><div className="live-state" role="status"><i className={setupReady ? "ready" : ""} /><span>{setupReady ? "Systems operational" : "Setup required"}</span><b>SIMULATED</b></div></header>
-    <nav className="quick-dock grouped-dock" aria-label="Grouped command center navigation"><button className={view === "committee" ? "active" : ""} onClick={() => goToRoom("lounge")}><i>⌂</i><span>Today</span></button><details><summary><i>♟</i><span>Agents</span></summary><div><button onClick={() => goToRoom("research", "research")}>Research</button><button onClick={() => goToRoom("risk", "risk")}>Risk</button><button onClick={() => goToRoom("cio", "cio")}>CIO</button><button onClick={() => goToHouse("chat")}>Ask an agent</button></div></details><button className={view === "portfolio" ? "active" : ""} onClick={() => setView("portfolio")}><i>◐</i><span>Portfolio</span></button><details><summary><i>≡</i><span>Records</span></summary><div><button onClick={() => setView("weather")}>Current position</button><button onClick={() => setView("performance")}>Results</button><button onClick={() => setView("universe")}>Approved stocks {pendingCount ? `(${pendingCount})` : ""}</button><button onClick={() => setView("decisions")}>Decision journal</button><button onClick={() => setView("workflow")}>How it works</button></div></details></nav>
+    <nav className="quick-dock three-page-nav" aria-label="Three page navigation"><button className={view === "committee" ? "active" : ""} onClick={() => goToRoom("lounge")}><i>1</i><span>Today</span></button><button className={view === "portfolio" ? "active" : ""} onClick={() => setView("portfolio")}><i>2</i><span>Portfolio</span>{pendingCount > 0 && <b>{pendingCount}</b>}</button><button className={view === "performance" ? "active" : ""} onClick={() => setView("performance")}><i>3</i><span>Review</span></button></nav>
     <div className="app-grid"><section className="content" id="main-content" tabIndex={-1}>{view !== "committee" && <><div className="page-context"><button className="back-house" onClick={() => goToHouse()}>← Today</button><div><span>You are here</span><strong>{currentView.label}</strong></div><small>{setupReady ? "Live system" : "Connecting"}</small></div><div className="navigation-guide"><div><strong>{currentView.label}</strong><span>{view === "portfolio" ? "See what the simulated fund owns and how much cash it holds." : view === "weather" ? "See the current gear, allocation limits, and active instructions." : view === "performance" ? "Review returns, volatility, drawdown, and prediction quality." : view === "risk" ? "Review challenges, hard controls, and improvement ideas." : view === "universe" ? "Approve the stocks the paper portfolio is allowed to hold." : view === "decisions" ? "Read the permanent record of past committee decisions." : "Follow how data moves through each agent and control."}</span></div><button onClick={() => goToHouse("chat")}>Ask about this</button></div><CommitteePet /></>}{content}{error && <div className="error-toast" role="alert"><strong>Review required</strong><span>{error}</span><button onClick={() => setError("")}>Close</button></div>}</section></div>
   </main>;
 }
