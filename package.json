@@ -2,6 +2,7 @@
   "name": "oh-mega-ai-investment-committee",
   "version": "0.1.0",
   "private": true,
+  "bin": { "ohmega": "scripts/ohmega-cli.mjs" },
   "engines": {
     "node": ">=22.13.0"
   },
@@ -13,7 +14,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "committee:weekly": "node --env-file-if-exists=.env.local scripts/run-weekly-committee.mjs",
-    "scheduler:install": "powershell -ExecutionPolicy Bypass -File scripts/install-weekly-task.ps1"
+    "scheduler:install": "powershell -ExecutionPolicy Bypass -File scripts/install-weekly-task.ps1",
+    "cli": "node scripts/ohmega-cli.mjs"
   },
   "dependencies": {
     "ajv": "^8.20.0",

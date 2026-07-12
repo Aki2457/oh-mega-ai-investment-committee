@@ -1,5 +1,21 @@
 # vinext-starter
 
+## OH MEGA command line
+
+The CLI uses the same automated production backend as the hosted Command Center.
+
+```powershell
+npm run cli -- status
+npm run cli -- weather
+npm run cli -- portfolio
+npm run cli -- universe
+npm run cli -- run pro
+npm run cli -- modify gear Lockdown "Human risk override"
+npm run cli -- modify allocation 35 "Reduce exposure"
+```
+
+Add `--json` to a read command for machine-readable output.
+
 A clean full-stack starter running on
 [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
 Drizzle support.
