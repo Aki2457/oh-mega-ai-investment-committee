@@ -135,7 +135,7 @@ async function requestOpenRouter(input: { model: string; messages: ChatMessage[]
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.OH_MEGA_BASE_URL ?? "http://localhost:8888",
-        "X-Title": "OH MEGA AI Investment Committee",
+        "X-Title": "Virtual Fund AI Investment Committee",
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -210,7 +210,7 @@ export async function judgeDecision(pack: MarketPack, opinions: AnalystOpinion[]
 
 export async function chatCompletion(input: { agent: string; profile: Profile; messages: ChatMessage[]; context: string }) {
   const model = input.profile === "flash" ? profileModels.flash.judge : input.profile === "think" ? profileModels.think.judge : profileModels.pro.judge;
-  const system = `You are the OH MEGA ${input.agent} Agent for a simulated US and China/HK AI technology paper fund. Answer directly. Use supplied real market and portfolio data. Search the web when current evidence is relevant and cite every current claim. The only modes are Balanced, Attach, and Lockdown. Preserve at least 25 percent cash in every investable recommendation. Never claim to place trades or to have Human approval.\n${input.context}`;
+  const system = `You are the Virtual Fund ${input.agent} Agent for a simulated US and China/HK AI technology paper fund. Answer directly. Use supplied real market and portfolio data. Search the web when current evidence is relevant and cite every current claim. The only modes are Balanced, Attach, and Lockdown. Preserve at least 25 percent cash in every investable recommendation. Never claim to place trades or to have Human approval.\n${input.context}`;
   const response = await requestOpenRouter({ model, webSearch: true, messages: [{ role: "system", content: system }, ...input.messages] });
   return { text: response.content, citations: response.citations, model };
 }

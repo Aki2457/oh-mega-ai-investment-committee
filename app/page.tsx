@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ResearchChat } from "./ResearchChat";
 
 export const metadata: Metadata = {
-  title: "OH MEGA Capital | Investment Command Center",
+  title: "Virtual Fund | Investment Command Center",
   description: "Decision, Risk, CEO, and Human oversight for a safety-first virtual fund.",
 };
 

@@ -18,7 +18,7 @@ const data = (path, options) => request(path, options).then((response) => respon
 const output = (value) => console.log(JSON.stringify(value, null, 2));
 
 function help() {
-  console.log(`OH MEGA Capital CLI
+  console.log(`Virtual Fund CLI
 
 Usage:
   npm run cli -- status

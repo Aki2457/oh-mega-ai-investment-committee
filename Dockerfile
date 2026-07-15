@@ -1,6 +1,6 @@
 FROM node:22-bookworm-slim
 
-LABEL org.opencontainers.image.title="OH MEGA Virtual Fund Backend"
+LABEL org.opencontainers.image.title="Virtual Fund Backend"
 LABEL org.opencontainers.image.description="Dockerized AI committee and paper-portfolio API with Human approval controls"
 
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN npm run build
 
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV SQLITE_PATH=/data/oh-mega.db
+ENV SQLITE_PATH=/data/virtual-fund.db
 
 VOLUME ["/data"]
 EXPOSE 8080

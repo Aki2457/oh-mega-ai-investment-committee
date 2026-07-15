@@ -1,8 +1,8 @@
 services:
   virtual-fund-backend:
     build: .
-    image: oh-mega-virtual-fund-backend:latest
-    container_name: oh-mega-virtual-fund-backend
+    image: virtual-fund-backend:latest
+    container_name: virtual-fund-backend
     restart: unless-stopped
     ports:
       - "8890:8080"
@@ -17,7 +17,7 @@ services:
       OH_MEGA_BASE_URL: http://localhost:8890
       MINIMUM_CASH_PCT: "25"
     volumes:
-      - oh-mega-data:/data
+      - virtual-fund-data:/data
 
 volumes:
-  oh-mega-data:
+  virtual-fund-data:

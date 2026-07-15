@@ -338,13 +338,13 @@ export function ResearchChat() {
   return <main className="app-shell">
     <a href="#main-content" className="skip-link">Skip to content</a>
     <header className="topbar">
-      <button className="brand" onClick={() => setPage("command")}><span>Ω</span><div><strong>OH MEGA</strong><small>VIRTUAL FUND</small></div></button>
+      <button className="brand" onClick={() => setPage("command")}><span>Ω</span><div><strong>VIRTUAL FUND</strong><small>CONTROL SYSTEM</small></div></button>
       <nav aria-label="Primary navigation"><button className={page === "command" ? "active" : ""} onClick={() => setPage("command")}>Command</button><button className={page === "research" ? "active" : ""} onClick={() => setPage("research")}>Research</button><button className={page === "ledger" ? "active" : ""} onClick={() => setPage("ledger")}>Ledger</button></nav>
       <div className="system-badge"><i className={systemsReady ? "ready" : ""} /><span>{systemsReady ? "SYSTEMS READY" : "SETUP REQUIRED"}</span><b>PAPER ONLY</b></div>
     </header>
     <div className="ticker-strip"><span>MODE <b>{activeMode}</b></span><span>STOCKS <b>{activeStock.toFixed(0)}%</b></span><span>CASH <b>{activeCash.toFixed(0)}%</b></span><span>FORECAST <b>{system.openRouter ? "AI + QUANT" : "QUANT MODEL"}</b></span><span>WEB EVIDENCE <b>{systemsReady ? "READY" : "UNAVAILABLE"}</b></span><span>HUMAN GATE <b>{pendingApproval ? "ACTION NEEDED" : "CLEAR"}</b></span></div>
     <div id="main-content" className="page-content" tabIndex={-1}>{page === "command" ? <CommandPage /> : page === "research" ? <ResearchPage /> : <LedgerPage />}</div>
-    <footer><span>OH MEGA Virtual Fund</span><p>Simulation and research interface. AI forecasts can be wrong. No real-money trading.</p><strong>Minimum cash: 25%</strong></footer>
+    <footer><span>Virtual Fund</span><p>Simulation and research interface. AI forecasts can be wrong. No real-money trading.</p><strong>Minimum cash: 25%</strong></footer>
     {error && <div className="error-toast" role="alert"><div><strong>Review required</strong><span>{error}</span></div><button onClick={() => setError("")}>Close</button></div>}
   </main>;
 }

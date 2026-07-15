@@ -1,4 +1,4 @@
-# OH MEGA Virtual Fund
+# Virtual Fund
 
 A virtual, paper-only fund with three operating modes and a four-role investment committee.
 
@@ -29,9 +29,9 @@ Copy `.env.docker.example` to `.env`, add the required provider keys, then run:
 docker compose up -d --build
 ```
 
-The backend and its API will be available at `http://localhost:8890`. Persistent paper-fund data is stored in the `oh-mega-data` volume.
+The backend and its API will be available at `http://localhost:8890`. Persistent paper-fund data is stored in the `virtual-fund-data` volume.
 
-The image name is `oh-mega-virtual-fund-backend:latest`.
+The image name is `virtual-fund-backend:latest`.
 
 Useful API routes:
 

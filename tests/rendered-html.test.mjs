@@ -18,7 +18,7 @@ async function waitForServer(output) {
   throw new Error(`Local worker did not start.\n${output.join("")}`);
 }
 
-test("server-renders the OH MEGA investment committee", { timeout: 60_000 }, async () => {
+test("server-renders the virtual fund investment committee", { timeout: 60_000 }, async () => {
   const output = [];
   const server = spawn(process.execPath, [cli, "dev", "--port", String(port)], {
     cwd: root,
@@ -31,7 +31,7 @@ test("server-renders the OH MEGA investment committee", { timeout: 60_000 }, asy
     const response = await waitForServer(output);
     assert.equal(response.status, 200, output.join(""));
     const html = await response.text();
-    assert.match(html, /OH MEGA/i);
+    assert.match(html, /VIRTUAL FUND/i);
     assert.match(html, /Investment Command Center/i);
     assert.match(html, /SIMULATED/i);
     assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
