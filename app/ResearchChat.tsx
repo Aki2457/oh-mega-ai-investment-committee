@@ -120,6 +120,11 @@ export function ResearchChat() {
   const predictions = latestRun?.final?.stockViews ?? [];
   const cashSafe = activeCash >= 25;
   const systemsReady = system.yahoo && system.persistence;
+  const nextAction = pendingApproval
+    ? { label: "Review recommendation", detail: "The committee has finished. Check the allocation and record your decision.", action: "review" as const }
+    : latestRun
+      ? { label: "Nothing required", detail: "The latest review is complete. The paper fund remains under its current controls.", action: "none" as const }
+      : { label: "Run the first review", detail: "Create the first market forecast, Risk challenge, and allocation recommendation.", action: "run" as const };
 
   const decisionFlow = useMemo(() => {
     const status = pendingApproval ? "Human review" : latestApproval?.status === "approved" ? "Approved" : latestApproval?.status === "rejected" ? "Rejected" : "Awaiting committee";
@@ -235,14 +240,21 @@ export function ResearchChat() {
 
   function renderCommandPage() {
     return <>
+      <section className={`next-step ${pendingApproval ? "needs-action" : ""}`}>
+        <div className="next-step-number">1</div>
+        <div className="next-step-copy"><p className="eyebrow">YOUR NEXT STEP</p><h2>{nextAction.label}</h2><p>{nextAction.detail}</p></div>
+        {nextAction.action === "run" && <button className="primary-button" onClick={runCommittee} disabled={running || !systemsReady}>{running ? "Committee working" : "Run committee"}</button>}
+        {nextAction.action === "review" && <a className="primary-link" href="#human-checkpoint">Review now</a>}
+        {nextAction.action === "none" && <button className="quiet-button" onClick={() => setPage("research")}>Ask a question</button>}
+      </section>
       <section className="hero-grid">
         <div className="hero-copy">
-          <p className="eyebrow">VIRTUAL FUND CONTROL ROOM</p>
-          <h2>One recommendation.<br /><span>Four layers of control.</span></h2>
-          <p>AI forecasts the next-week direction, checks current web evidence, and presents a paper allocation. You make the final decision.</p>
+          <p className="eyebrow">TODAY</p>
+          <h2>{activeMode} posture.<br /><span>{activeCash.toFixed(0)}% held in cash.</span></h2>
+          <p>This is the current paper-fund position. The committee checks prices, current evidence, and risk each week. You only act when a recommendation reaches the Human checkpoint.</p>
           <div className="hero-actions">
-            <button className="primary-button" onClick={runCommittee} disabled={running || !systemsReady}>{running ? "Committee working" : "Run committee"}</button>
-            <button className="quiet-button" onClick={() => setPage("research")}>Search with AI</button>
+            <button className="quiet-button" onClick={() => setPage("research")}>Ask the committee</button>
+            <button className="quiet-button" onClick={() => setPage("ledger")}>See portfolio</button>
           </div>
           <div className="run-status"><i className={running ? "pulse" : ""} /><span>{runStage}</span></div>
         </div>
@@ -252,30 +264,19 @@ export function ResearchChat() {
         </div>
       </section>
 
-      <section className="safety-row" aria-label="Hard safety controls">
-        <div><span className={cashSafe ? "safe" : "alert"}>{cashSafe ? "✓" : "!"}</span><p><strong>Cash reserve protected</strong><small>At least 25% cash in every investable mode</small></p></div>
-        <div><span className="safe">✓</span><p><strong>Paper fund only</strong><small>No broker connection and no real-money execution</small></p></div>
-        <div><span className="safe">✓</span><p><strong>Human approval gate</strong><small>No simulated rebalance before your decision</small></p></div>
-        <div><span className="safe">✓</span><p><strong>Long-only controls</strong><small>No leverage, no shorts, 10% single-stock cap</small></p></div>
+      <section className="control-summary" aria-label="Hard safety controls">
+        <div><span className={cashSafe ? "safe" : "alert"}>{cashSafe ? "✓" : "!"}</span><p><strong>{cashSafe ? "All hard controls are active" : "Cash control needs attention"}</strong><small>Paper only · Human approval · Long only · 10% stock cap · 25% minimum cash</small></p></div>
+        <details><summary>Change review posture</summary><div className="mode-choices">{modes.map((mode) => <button key={mode.id} className={draftMode === mode.id ? "selected" : ""} onClick={() => setDraftMode(mode.id)}><strong>{mode.id}</strong><span>{mode.target} stocks / cash</span></button>)}</div><p>The selection guides the next review. Evidence and Risk controls still determine the recommendation.</p></details>
       </section>
 
-      <section className="section-block">
-        <div className="section-heading"><div><p className="eyebrow">THREE OPERATING MODES</p><h3>Choose the posture for the next review</h3></div><span>Selection is a review preference. The committee still needs evidence.</span></div>
-        <div className="mode-grid">{modes.map((mode) => <button key={mode.id} className={`mode-card mode-${mode.id.toLowerCase()} ${draftMode === mode.id ? "selected" : ""}`} onClick={() => setDraftMode(mode.id)}>
-          <div className="mode-top"><span>{mode.id.slice(0, 1)}</span><small>{draftMode === mode.id ? "SELECTED" : "MODE"}</small></div>
-          <h4>{mode.id}</h4><p>{mode.description}</p>
-          <div className="mode-target"><b>{mode.target}</b><span>stocks / cash</span></div>
-          <small className="mode-rule">{mode.rule}</small>
-        </button>)}</div>
-      </section>
-
-      <section className="committee-layout">
-        <div className="committee-panel">
+      <section className="committee-layout" id="human-checkpoint">
+        <details className="committee-panel committee-details">
+          <summary><span><b>How the committee reached the decision</b><small>Decision → Risk → CEO → Human</small></span><i>View process</i></summary>
           <div className="section-heading compact"><div><p className="eyebrow">INVESTMENT COMMITTEE</p><h3>Evidence moves through four gates</h3></div><span>CEO is the main AI. Human is final.</span></div>
           <div className="committee-chain">{committee.map((member, index) => <article key={member.role} className={member.role === "Human" ? "human" : ""}>
             <div className="member-mark">{member.mark}</div><div><span>0{index + 1}</span><h4>{member.role}</h4><p>{member.copy}</p><small>{decisionFlow[index].state}</small></div>
           </article>)}</div>
-        </div>
+        </details>
         <div className={`approval-panel ${pendingApproval ? "pending" : ""}`}>
           <p className="eyebrow">HUMAN CHECKPOINT</p>
           {pendingApproval ? <>
@@ -296,7 +297,7 @@ export function ResearchChat() {
 
   function renderResearchPage() {
     return <>
-      <section className="page-intro"><p className="eyebrow">AI RESEARCH DESK</p><h2>Search current evidence.<br /><span>Keep forecasts accountable.</span></h2><p>The Decision, Risk, and CEO agents can search the web. Every current claim should return a source link.</p></section>
+      <section className="page-intro"><p className="eyebrow">ASK THE COMMITTEE</p><h2>One question.<br /><span>Current evidence.</span></h2><p>Choose the perspective you need, ask in plain language, and receive an answer grounded in the live market pack and cited sources.</p></section>
       <section className="research-layout">
         <form className="search-panel" onSubmit={askCommittee}>
           <div className="agent-switch" role="group" aria-label="Choose committee agent">{(["decision", "risk", "ceo"] as Agent[]).map((item) => <button type="button" key={item} onClick={() => setAgent(item)} className={agent === item ? "active" : ""}>{item === "ceo" ? "CEO" : item[0].toUpperCase() + item.slice(1)}</button>)}</div>
@@ -321,7 +322,7 @@ export function ResearchChat() {
 
   function renderLedgerPage() {
     return <>
-      <section className="page-intro ledger-intro"><p className="eyebrow">CONTROL LEDGER</p><h2>See what is owned,<br /><span>why it changed, and who approved.</span></h2></section>
+      <section className="page-intro ledger-intro"><p className="eyebrow">PORTFOLIO</p><h2>What the fund holds.<br /><span>Why it changed.</span></h2><p>See the current paper allocation, the latest Risk record, and every Human checkpoint in one place.</p></section>
       <section className="ledger-cards"><article><span>Virtual NAV</span><strong>{latestNav.toFixed(2)}</strong><small>Paper value</small></article><article><span>Cash</span><strong>{activeCash.toFixed(0)}%</strong><small>{cashSafe ? "Reserve protected" : "Control breach"}</small></article><article><span>Approved universe</span><strong>{approvedCount}</strong><small>Eligible securities</small></article><article><span>Latest data</span><strong>{formatDate(latestRun?.dataAsOf)}</strong><small>{latestRun?.dataStale ? "Stale data warning" : "Freshness checked"}</small></article></section>
       <section className="ledger-grid">
         <article className="data-panel"><div className="section-heading compact"><div><p className="eyebrow">PAPER HOLDINGS</p><h3>Current allocation</h3></div><span>{portfolio.positions.length} positions</span></div>
@@ -339,7 +340,7 @@ export function ResearchChat() {
     <a href="#main-content" className="skip-link">Skip to content</a>
     <header className="topbar">
       <button className="brand" onClick={() => setPage("command")}><span>Ω</span><div><strong>VIRTUAL FUND</strong><small>CONTROL SYSTEM</small></div></button>
-      <nav aria-label="Primary navigation"><button className={page === "command" ? "active" : ""} onClick={() => setPage("command")}>Command</button><button className={page === "research" ? "active" : ""} onClick={() => setPage("research")}>Research</button><button className={page === "ledger" ? "active" : ""} onClick={() => setPage("ledger")}>Ledger</button></nav>
+      <nav aria-label="Primary navigation"><button className={page === "command" ? "active" : ""} onClick={() => setPage("command")}>Today</button><button className={page === "research" ? "active" : ""} onClick={() => setPage("research")}>Ask</button><button className={page === "ledger" ? "active" : ""} onClick={() => setPage("ledger")}>Portfolio</button></nav>
       <div className="system-badge"><i className={systemsReady ? "ready" : ""} /><span>{systemsReady ? "SYSTEMS READY" : "SETUP REQUIRED"}</span><b>PAPER ONLY</b></div>
     </header>
     <div className="ticker-strip"><span>MODE <b>{activeMode}</b></span><span>STOCKS <b>{activeStock.toFixed(0)}%</b></span><span>CASH <b>{activeCash.toFixed(0)}%</b></span><span>FORECAST <b>{system.openRouter ? "AI + QUANT" : "QUANT MODEL"}</b></span><span>WEB EVIDENCE <b>{systemsReady ? "READY" : "UNAVAILABLE"}</b></span><span>HUMAN GATE <b>{pendingApproval ? "ACTION NEEDED" : "CLEAR"}</b></span></div>
