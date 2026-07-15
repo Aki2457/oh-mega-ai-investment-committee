@@ -233,7 +233,7 @@ export function ResearchChat() {
     }
   }
 
-  function CommandPage() {
+  function renderCommandPage() {
     return <>
       <section className="hero-grid">
         <div className="hero-copy">
@@ -294,7 +294,7 @@ export function ResearchChat() {
     </>;
   }
 
-  function ResearchPage() {
+  function renderResearchPage() {
     return <>
       <section className="page-intro"><p className="eyebrow">AI RESEARCH DESK</p><h2>Search current evidence.<br /><span>Keep forecasts accountable.</span></h2><p>The Decision, Risk, and CEO agents can search the web. Every current claim should return a source link.</p></section>
       <section className="research-layout">
@@ -319,7 +319,7 @@ export function ResearchChat() {
     </>;
   }
 
-  function LedgerPage() {
+  function renderLedgerPage() {
     return <>
       <section className="page-intro ledger-intro"><p className="eyebrow">CONTROL LEDGER</p><h2>See what is owned,<br /><span>why it changed, and who approved.</span></h2></section>
       <section className="ledger-cards"><article><span>Virtual NAV</span><strong>{latestNav.toFixed(2)}</strong><small>Paper value</small></article><article><span>Cash</span><strong>{activeCash.toFixed(0)}%</strong><small>{cashSafe ? "Reserve protected" : "Control breach"}</small></article><article><span>Approved universe</span><strong>{approvedCount}</strong><small>Eligible securities</small></article><article><span>Latest data</span><strong>{formatDate(latestRun?.dataAsOf)}</strong><small>{latestRun?.dataStale ? "Stale data warning" : "Freshness checked"}</small></article></section>
@@ -343,7 +343,7 @@ export function ResearchChat() {
       <div className="system-badge"><i className={systemsReady ? "ready" : ""} /><span>{systemsReady ? "SYSTEMS READY" : "SETUP REQUIRED"}</span><b>PAPER ONLY</b></div>
     </header>
     <div className="ticker-strip"><span>MODE <b>{activeMode}</b></span><span>STOCKS <b>{activeStock.toFixed(0)}%</b></span><span>CASH <b>{activeCash.toFixed(0)}%</b></span><span>FORECAST <b>{system.openRouter ? "AI + QUANT" : "QUANT MODEL"}</b></span><span>WEB EVIDENCE <b>{systemsReady ? "READY" : "UNAVAILABLE"}</b></span><span>HUMAN GATE <b>{pendingApproval ? "ACTION NEEDED" : "CLEAR"}</b></span></div>
-    <div id="main-content" className="page-content" tabIndex={-1}>{page === "command" ? <CommandPage /> : page === "research" ? <ResearchPage /> : <LedgerPage />}</div>
+    <div id="main-content" className="page-content" tabIndex={-1}>{page === "command" ? renderCommandPage() : page === "research" ? renderResearchPage() : renderLedgerPage()}</div>
     <footer><span>Virtual Fund</span><p>Simulation and research interface. AI forecasts can be wrong. No real-money trading.</p><strong>Minimum cash: 25%</strong></footer>
     {error && <div className="error-toast" role="alert"><div><strong>Review required</strong><span>{error}</span></div><button onClick={() => setError("")}>Close</button></div>}
   </main>;
