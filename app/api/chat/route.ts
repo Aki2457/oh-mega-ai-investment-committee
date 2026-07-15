@@ -1,6 +1,7 @@
 import { getChatHistory, getPortfolio, saveChatMessage } from "@/db/repository";
 import { buildMarketPack } from "@/lib/market-data";
 import { chatCompletion } from "@/lib/openrouter";
+import { keylessEvidenceBrief } from "@/lib/web-evidence";
 import type { AgentKind, Profile } from "@/lib/types";
 
 const encoder = new TextEncoder();
@@ -20,11 +21,17 @@ export async function POST(request: Request) {
         const [pack, portfolio, history] = await Promise.all([buildMarketPack(), getPortfolio(), getChatHistory(sessionId)]);
         await saveChatMessage({ sessionId, agent, profile, role: "user", content: message });
         send({ type: "stage", stage: "agent", message: "Running Think Standard with web search" });
-        const result = await chatCompletion({
-          agent, profile,
-          messages: [...history, { role: "user", content: message }],
-          context: `Real market pack: ${JSON.stringify(pack)}\nCurrent simulated portfolio: ${JSON.stringify(portfolio)}.`,
-        });
+        let result;
+        try {
+          result = await chatCompletion({
+            agent, profile,
+            messages: [...history, { role: "user", content: message }],
+            context: `Real market pack: ${JSON.stringify(pack)}\nCurrent simulated portfolio: ${JSON.stringify(portfolio)}.`,
+          });
+        } catch {
+          send({ type: "stage", stage: "search", message: "Using the cited web-evidence fallback" });
+          result = await keylessEvidenceBrief({ query: message, agent, pack });
+        }
         for (const chunk of result.text.match(/.{1,120}(?:\s|$)/g) ?? [result.text]) send({ type: "delta", text: chunk });
         await saveChatMessage({ sessionId, agent, profile, role: "assistant", content: result.text, citations: result.citations });
         send({ type: "complete", sessionId, text: result.text, citations: result.citations, model: result.model });

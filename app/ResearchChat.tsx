@@ -301,8 +301,8 @@ export function ResearchChat() {
         <form className="search-panel" onSubmit={askCommittee}>
           <div className="agent-switch" role="group" aria-label="Choose committee agent">{(["decision", "risk", "ceo"] as Agent[]).map((item) => <button type="button" key={item} onClick={() => setAgent(item)} className={agent === item ? "active" : ""}>{item === "ceo" ? "CEO" : item[0].toUpperCase() + item.slice(1)}</button>)}</div>
           <label><span>Question for the {agent === "ceo" ? "CEO" : agent} Agent</span><textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What current evidence could change the next-week view for the approved universe?" /></label>
-          <button className="primary-button" disabled={searching || !system.openRouter}>{searching ? "Searching and reasoning" : "Search the web"}</button>
-          <small>AI forecasts are uncertain. Verify the cited evidence before approval.</small>
+          <button className="primary-button" disabled={searching || !systemsReady}>{searching ? "Searching and reasoning" : "Search the web"}</button>
+          <small>{system.openRouter ? "AI reasoning and cited web search are active." : "Cited web-evidence fallback is active. Quantitative forecasts remain available."} Verify every source before approval.</small>
         </form>
         <article className="answer-panel">
           <div className="answer-head"><span>{agent.toUpperCase()} AGENT</span><small>{searching ? "LIVE SEARCH" : answer ? "RESEARCH COMPLETE" : "READY"}</small></div>
@@ -342,7 +342,7 @@ export function ResearchChat() {
       <nav aria-label="Primary navigation"><button className={page === "command" ? "active" : ""} onClick={() => setPage("command")}>Command</button><button className={page === "research" ? "active" : ""} onClick={() => setPage("research")}>Research</button><button className={page === "ledger" ? "active" : ""} onClick={() => setPage("ledger")}>Ledger</button></nav>
       <div className="system-badge"><i className={systemsReady ? "ready" : ""} /><span>{systemsReady ? "SYSTEMS READY" : "SETUP REQUIRED"}</span><b>PAPER ONLY</b></div>
     </header>
-    <div className="ticker-strip"><span>MODE <b>{activeMode}</b></span><span>STOCKS <b>{activeStock.toFixed(0)}%</b></span><span>CASH <b>{activeCash.toFixed(0)}%</b></span><span>AI <b>{system.openRouter ? "CONNECTED" : "OFFLINE"}</b></span><span>DATA <b>{system.yahoo ? "LIVE" : "UNAVAILABLE"}</b></span><span>HUMAN GATE <b>{pendingApproval ? "ACTION NEEDED" : "CLEAR"}</b></span></div>
+    <div className="ticker-strip"><span>MODE <b>{activeMode}</b></span><span>STOCKS <b>{activeStock.toFixed(0)}%</b></span><span>CASH <b>{activeCash.toFixed(0)}%</b></span><span>FORECAST <b>{system.openRouter ? "AI + QUANT" : "QUANT MODEL"}</b></span><span>WEB EVIDENCE <b>{systemsReady ? "READY" : "UNAVAILABLE"}</b></span><span>HUMAN GATE <b>{pendingApproval ? "ACTION NEEDED" : "CLEAR"}</b></span></div>
     <div id="main-content" className="page-content" tabIndex={-1}>{page === "command" ? <CommandPage /> : page === "research" ? <ResearchPage /> : <LedgerPage />}</div>
     <footer><span>OH MEGA Virtual Fund</span><p>Simulation and research interface. AI forecasts can be wrong. No real-money trading.</p><strong>Minimum cash: 25%</strong></footer>
     {error && <div className="error-toast" role="alert"><div><strong>Review required</strong><span>{error}</span></div><button onClick={() => setError("")}>Close</button></div>}
