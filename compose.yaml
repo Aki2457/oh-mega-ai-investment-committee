@@ -1,8 +1,8 @@
 services:
-  oh-mega:
+  virtual-fund-backend:
     build: .
-    image: oh-mega-ai-committee:local
-    container_name: oh-mega-ai-committee-local
+    image: oh-mega-virtual-fund-backend:latest
+    container_name: oh-mega-virtual-fund-backend
     restart: unless-stopped
     ports:
       - "8890:8080"
@@ -15,6 +15,7 @@ services:
       MASSIVE_API_KEY: ${MASSIVE_API_KEY:-}
       COMMITTEE_SCHEDULER_TOKEN: ${COMMITTEE_SCHEDULER_TOKEN:-replace-with-a-long-random-value}
       OH_MEGA_BASE_URL: http://localhost:8890
+      MINIMUM_CASH_PCT: "25"
     volumes:
       - oh-mega-data:/data
 

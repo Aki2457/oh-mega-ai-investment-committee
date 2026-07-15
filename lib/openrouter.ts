@@ -45,7 +45,7 @@ function stockViewSchema() {
 const analystSchema = {
   type: "object", additionalProperties: false,
   properties: {
-    role: { type: "string" }, model: { type: "string" }, mode: { type: "string", enum: ["Attack", "Balanced", "Defense", "Lockdown"] },
+    role: { type: "string" }, model: { type: "string" }, mode: { type: "string", enum: ["Balanced", "Attach", "Lockdown"] },
     usUpProbability: { type: "number", minimum: 0, maximum: 1 }, chinaUpProbability: { type: "number", minimum: 0, maximum: 1 },
     usExpectedReturnPct: { type: "number" }, chinaExpectedReturnPct: { type: "number" }, confidence: { type: "number", minimum: 0, maximum: 1 },
     catalysts: { type: "array", items: { type: "string" } }, risks: { type: "array", items: { type: "string" } }, rationale: { type: "string" },
@@ -77,7 +77,7 @@ const scoreSchema = {
 const finalSchema = {
   type: "object", additionalProperties: false,
   properties: {
-    mode: { type: "string", enum: ["Attack", "Balanced", "Defense", "Lockdown"] }, confidence: { type: "number", minimum: 0, maximum: 1 },
+    mode: { type: "string", enum: ["Balanced", "Attach", "Lockdown"] }, confidence: { type: "number", minimum: 0, maximum: 1 },
     usUpProbability: { type: "number", minimum: 0, maximum: 1 }, chinaUpProbability: { type: "number", minimum: 0, maximum: 1 },
     usExpectedReturnPct: { type: "number" }, chinaExpectedReturnPct: { type: "number" },
     usSleevePct: { type: "number", minimum: 35, maximum: 65 }, chinaSleevePct: { type: "number", minimum: 35, maximum: 65 },
@@ -178,8 +178,8 @@ function sharedContext(pack: MarketPack) {
 export async function quantitativeOpinion(pack: MarketPack, profile: Profile): Promise<AnalystOpinion> {
   const model = profileModels[profile].quantitative;
   return structured({ model, schemaName: "quantitative_opinion", schema: analystSchema, messages: [
-    { role: "system", content: "You are the independent quantitative Research Analyst for a simulated US and China/HK AI technology fund. Use only supplied point-in-time price evidence. Estimate calibrated next-week probabilities and returns. Do not invent facts or sources. Recommend up to five candidates per region only when evidence supports them. Return the required JSON." },
-    { role: "user", content: `${sharedContext(pack)}\nSet role to Quantitative Analyst and model to ${model}.` },
+    { role: "system", content: "You are the quantitative member of the Decision Agent for a simulated US and China/HK AI technology fund. Use only supplied point-in-time price evidence. Estimate calibrated next-week probabilities and returns. Do not invent facts or sources. Recommend up to five candidates per region only when evidence supports them. Choose Balanced, Attach, or Lockdown. Attach means higher conviction with a 25 percent minimum cash reserve. Return the required JSON." },
+    { role: "user", content: `${sharedContext(pack)}\nSet role to Decision Agent, Quantitative and model to ${model}.` },
   ] });
 }
 
@@ -187,8 +187,8 @@ export async function macroOpinion(pack: MarketPack, profile: Profile): Promise<
   const model = profileModels[profile].macro;
   if (!model) return null;
   return structured({ model, schemaName: "macro_opinion", schema: analystSchema, webSearch: true, messages: [
-    { role: "system", content: "You are the independent macro, policy, earnings, and news Research Analyst for a simulated US and China/HK AI technology fund. Search the last seven days. Prioritize regulators, exchanges, filings, central banks, statistical agencies, and investor relations. Every current claim must have a URL citation. Estimate next-week probabilities and returns. Return the required JSON." },
-    { role: "user", content: `${sharedContext(pack)}\nSearch for current evidence affecting the listed markets and approved stocks. Set role to Macro and News Analyst and model to ${model}.` },
+    { role: "system", content: "You are the web research member of the Decision Agent for a simulated US and China/HK AI technology fund. Search the last seven days. Prioritize regulators, exchanges, filings, central banks, statistical agencies, and investor relations. Every current claim must have a URL citation. Estimate next-week probabilities and returns. Choose Balanced, Attach, or Lockdown. Return the required JSON." },
+    { role: "user", content: `${sharedContext(pack)}\nSearch for current evidence affecting the listed markets and approved stocks. Set role to Decision Agent, Web Research and model to ${model}.` },
   ] });
 }
 
@@ -203,14 +203,14 @@ export async function riskOpinion(pack: MarketPack, opinions: AnalystOpinion[], 
 export async function judgeDecision(pack: MarketPack, opinions: AnalystOpinion[], risk: RiskOpinion, profile: Profile): Promise<FinalDecision> {
   const model = profileModels[profile].judge;
   return structured({ model, schemaName: "final_decision", schema: finalSchema, messages: [
-    { role: "system", content: "You are the CIO judge for a simulated paper portfolio. You may choose Attack, Balanced, Defense, or Lockdown. Lockdown means no investing and 100% cash, reserved for severe risk or unusable evidence. Score every analyst from 0 to 100 for evidence quality, data consistency, calibration, source quality, and risk awareness. Keep each regional stock-sleeve share between 35 and 65 and make them total 100. Treat Risk objections explicitly. Use approved stocks only for stockViews. Candidates remain pending. Return the required JSON." },
+    { role: "system", content: "You are the CEO Agent and main judge for a simulated paper portfolio. You may choose Balanced, Attach, or Lockdown. Balanced targets 50 percent stocks and 50 percent cash. Attach is the higher-conviction mode and targets no more than 75 percent stocks, preserving at least 25 percent cash. Lockdown means 100 percent cash and is used for severe risk or unusable evidence. Score every analyst from 0 to 100 for evidence quality, data consistency, calibration, source quality, and risk awareness. Keep each regional stock-sleeve share between 35 and 65 and make them total 100. Treat Risk objections explicitly. Use approved stocks only for stockViews. Candidates remain pending. The Human makes the final authorization, so produce a recommendation only. Return the required JSON." },
     { role: "user", content: `${sharedContext(pack)}\nAnalyst opinions: ${JSON.stringify(opinions)}\nIndependent Risk opinion: ${JSON.stringify(risk)}\nThe portfolio is simulated and has no broker connection.` },
   ] });
 }
 
 export async function chatCompletion(input: { agent: string; profile: Profile; messages: ChatMessage[]; context: string }) {
   const model = input.profile === "flash" ? profileModels.flash.judge : input.profile === "think" ? profileModels.think.judge : profileModels.pro.judge;
-  const system = `You are the OH MEGA ${input.agent} Agent for a simulated US and China/HK AI technology paper fund. Answer directly. Use supplied real market and portfolio data. Search the web when current evidence is relevant and cite every current claim. Never claim to place trades.\n${input.context}`;
+  const system = `You are the OH MEGA ${input.agent} Agent for a simulated US and China/HK AI technology paper fund. Answer directly. Use supplied real market and portfolio data. Search the web when current evidence is relevant and cite every current claim. The only modes are Balanced, Attach, and Lockdown. Preserve at least 25 percent cash in every investable recommendation. Never claim to place trades or to have Human approval.\n${input.context}`;
   const response = await requestOpenRouter({ model, webSearch: true, messages: [{ role: "system", content: system }, ...input.messages] });
   return { text: response.content, citations: response.citations, model };
 }
@@ -218,7 +218,7 @@ export async function chatCompletion(input: { agent: string; profile: Profile; m
 function mockResponse(schemaName: string, model: string, prompt: string) {
   const citation = { url: "https://example.com/mock-source", title: "Mock source", content: "Test-only source" };
   if (schemaName.includes("opinion") && schemaName !== "risk_opinion") return { content: JSON.stringify({
-    role: schemaName.startsWith("macro") ? "Macro and News Analyst" : "Quantitative Analyst", model, mode: "Balanced",
+    role: schemaName.startsWith("macro") ? "Decision Agent, Web Research" : "Decision Agent, Quantitative", model, mode: "Balanced",
     usUpProbability: 0.58, chinaUpProbability: 0.46, usExpectedReturnPct: 0.7, chinaExpectedReturnPct: -0.2, confidence: 0.63,
     catalysts: ["Positive US trend"], risks: ["China trend remains weak"], rationale: "The evidence is mixed.", candidates: [], stockViews: [], citations: [citation],
   }), citations: [citation] };
@@ -227,6 +227,6 @@ function mockResponse(schemaName: string, model: string, prompt: string) {
     { objective: "Reduce volatility", test: "Volatility-aware weights", successMeasure: "Volatility below 18%", tradeoff: "Lower upside" },
     { objective: "Improve calibration", test: "Track Brier score", successMeasure: "Falling error", tradeoff: "Longer evaluation period" },
   ], rationale: "Proceed with controls." }), citations: [] };
-  if (schemaName === "final_decision") return { content: JSON.stringify({ mode: "Balanced", confidence: 0.68, usUpProbability: 0.58, chinaUpProbability: 0.46, usExpectedReturnPct: 0.7, chinaExpectedReturnPct: -0.2, usSleevePct: 65, chinaSleevePct: 35, rationale: "Mixed market evidence supports Balanced.", riskOverrideRationale: "No override required.", analystScores: [{ role: "Quantitative Analyst", evidenceQuality: 80, dataConsistency: 80, calibration: 70, sourceQuality: 70, riskAwareness: 75, total: 75 }], candidates: [], stockViews: [], citations: [citation] }), citations: [citation] };
+  if (schemaName === "final_decision") return { content: JSON.stringify({ mode: "Balanced", confidence: 0.68, usUpProbability: 0.58, chinaUpProbability: 0.46, usExpectedReturnPct: 0.7, chinaExpectedReturnPct: -0.2, usSleevePct: 65, chinaSleevePct: 35, rationale: "Mixed market evidence supports Balanced.", riskOverrideRationale: "No override required.", analystScores: [{ role: "Decision Agent, Quantitative", evidenceQuality: 80, dataConsistency: 80, calibration: 70, sourceQuality: 70, riskAwareness: 75, total: 75 }], candidates: [], stockViews: [], citations: [citation] }), citations: [citation] };
   return { content: `Mock ${model} response to: ${prompt.slice(0, 80)}`, citations: [citation] };
 }

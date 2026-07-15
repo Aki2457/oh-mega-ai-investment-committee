@@ -3,7 +3,7 @@ import { ResearchChat } from "./ResearchChat";
 
 export const metadata: Metadata = {
   title: "OH MEGA Capital | Investment Command Center",
-  description: "Research, Risk, CIO decisions, and simulated portfolio oversight in one command center.",
+  description: "Decision, Risk, CEO, and Human oversight for a safety-first virtual fund.",
 };
 
 export default function Home() {

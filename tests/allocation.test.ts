@@ -11,13 +11,13 @@ const baseFeature: MarketFeatures = {
 };
 
 const final: FinalDecision = {
-  mode: "Attack", confidence: 0.8, usUpProbability: 0.65, chinaUpProbability: 0.58, usExpectedReturnPct: 1, chinaExpectedReturnPct: 0.7,
+  mode: "Attach", confidence: 0.8, usUpProbability: 0.65, chinaUpProbability: 0.58, usExpectedReturnPct: 1, chinaExpectedReturnPct: 0.7,
   usSleevePct: 65, chinaSleevePct: 35, rationale: "Test", riskOverrideRationale: "", analystScores: [], candidates: [], citations: [],
   stockViews: [],
 };
 
 function pack(approved: MarketPack["approvedTickers"], features: MarketFeatures[]): MarketPack {
-  return { generatedAt: "2026-07-11T00:00:00Z", dataAsOf: "2026-07-10", stale: false, frozen: false, mechanicalMode: "Attack", approvedTickers: approved, features, providerChecks: [], warnings: [] };
+  return { generatedAt: "2026-07-11T00:00:00Z", dataAsOf: "2026-07-10", stale: false, frozen: false, mechanicalMode: "Attach", approvedTickers: approved, features, providerChecks: [], warnings: [] };
 }
 
 test("keeps an empty approved universe fully in cash", () => {
@@ -32,6 +32,7 @@ test("enforces single-name caps and preserves total weight", () => {
   const proposal = buildProposal(pack(approved, features), final);
   assert.ok(proposal.positions.every((position) => position.weightPct <= 10));
   assert.ok(Math.abs(proposal.stockPct + proposal.cashPct - 100) < 1e-9);
+  assert.ok(proposal.cashPct >= 25);
   assert.equal(proposal.usSleevePct + proposal.chinaSleevePct, 100);
 });
 

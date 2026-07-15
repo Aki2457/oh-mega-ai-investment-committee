@@ -1,7 +1,7 @@
 export type Region = "US" | "China/HK";
-export type Mode = "Attack" | "Balanced" | "Defense" | "Lockdown";
+export type Mode = "Balanced" | "Attach" | "Lockdown";
 export type Profile = "flash" | "think" | "pro";
-export type AgentKind = "research" | "cio" | "risk";
+export type AgentKind = "decision" | "risk" | "ceo";
 
 export type Citation = {
   url: string;
@@ -136,7 +136,7 @@ export type PortfolioProposal = {
 
 export type FundModification = {
   id: string;
-  type: "gear" | "stock_allocation" | "halt" | "buy" | "short";
+  type: "gear" | "stock_allocation" | "halt" | "buy";
   value: string;
   ticker: string | null;
   note: string;

@@ -73,6 +73,7 @@ export function ensureDatabase() {
       `CREATE INDEX IF NOT EXISTS chat_session_idx ON chat_messages(session_id, created_at)`,
       `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
       `CREATE TABLE IF NOT EXISTS fund_modifications (id TEXT PRIMARY KEY, type TEXT NOT NULL, value TEXT NOT NULL DEFAULT '', ticker TEXT, note TEXT NOT NULL DEFAULT '', source TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+      `CREATE TABLE IF NOT EXISTS human_approvals (run_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'pending', proposal_json TEXT NOT NULL, decided_by TEXT, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
       ];
       await d1.batch(statements.map((statement) => d1.prepare(statement)));
       await d1.prepare("INSERT INTO nav_history (id, valuation_date, nav, cash_weight_pct, mode) VALUES (?, ?, 100, 100, 'Cash') ON CONFLICT(id) DO NOTHING")
@@ -175,6 +176,41 @@ export async function saveDecision(runId: string, final: FinalDecision, proposal
   await db().prepare(`INSERT OR REPLACE INTO decisions (id, run_id, mode, stock_pct, cash_pct, us_sleeve_pct, china_sleeve_pct, risk_opinion, rationale, citations_json)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(crypto.randomUUID(), runId, proposal.mode, proposal.stockPct, proposal.cashPct, proposal.usSleevePct, proposal.chinaSleevePct, risk.opinion, final.rationale, JSON.stringify(final.citations)).run();
+  await savePendingApproval(runId, proposal);
+}
+
+export async function savePendingApproval(runId: string, proposal: PortfolioProposal) {
+  await ensureDatabase();
+  await db().prepare(`INSERT INTO human_approvals (run_id, status, proposal_json) VALUES (?, 'pending', ?)
+    ON CONFLICT(run_id) DO UPDATE SET proposal_json=CASE WHEN human_approvals.status='pending' THEN excluded.proposal_json ELSE human_approvals.proposal_json END, updated_at=CURRENT_TIMESTAMP`)
+    .bind(runId, JSON.stringify(proposal)).run();
+}
+
+function validateHumanProposal(proposal: PortfolioProposal) {
+  const total = proposal.stockPct + proposal.cashPct;
+  if (proposal.cashPct < 25 || proposal.stockPct > 75) throw new Error("Safety control failed: every investable mode must retain at least 25% cash");
+  if (Math.abs(total - 100) > 0.01) throw new Error("Safety control failed: proposal weights do not total 100%");
+  if (proposal.positions.some((position) => position.weightPct < 0 || position.weightPct > 10)) throw new Error("Safety control failed: single-stock weight exceeds the 10% cap");
+}
+
+export async function decideHumanApproval(input: { runId: string; action: "approve" | "reject"; decidedBy: string; note?: string }) {
+  await ensureDatabase();
+  const row = await db().prepare("SELECT * FROM human_approvals WHERE run_id=?").bind(input.runId).first<D1Row>();
+  if (!row) throw new Error("No proposal is waiting for Human approval");
+  const currentStatus = String(row.status);
+  if (currentStatus !== "pending") return { runId: input.runId, status: currentStatus, decidedBy: row.decided_by, note: row.note };
+  if (input.action === "reject") {
+    await db().prepare("UPDATE human_approvals SET status='rejected', decided_by=?, note=?, updated_at=CURRENT_TIMESTAMP WHERE run_id=? AND status='pending'")
+      .bind(input.decidedBy, input.note ?? "", input.runId).run();
+    return { runId: input.runId, status: "rejected", decidedBy: input.decidedBy, note: input.note ?? "" };
+  }
+  const proposal = parseJson<PortfolioProposal>(row.proposal_json, {} as PortfolioProposal);
+  validateHumanProposal(proposal);
+  await rebalancePaper(input.runId, proposal);
+  await replaceCommitteeModifications(proposal.mode, proposal.stockPct, `Human approved: ${input.note ?? "No note"}`);
+  await db().prepare("UPDATE human_approvals SET status='approved', decided_by=?, note=?, updated_at=CURRENT_TIMESTAMP WHERE run_id=? AND status='pending'")
+    .bind(input.decidedBy, input.note ?? "", input.runId).run();
+  return { runId: input.runId, status: "approved", decidedBy: input.decidedBy, note: input.note ?? "", proposal };
 }
 
 export async function rebalancePaper(runId: string, proposal: PortfolioProposal) {
@@ -258,17 +294,19 @@ function mapRun(row: D1Row) {
 
 export async function getPortfolio() {
   await ensureDatabase();
-  const [positions, transactions, nav, decisionsRows] = await Promise.all([
+  const [positions, transactions, nav, decisionsRows, approvals] = await Promise.all([
     db().prepare("SELECT * FROM paper_positions ORDER BY weight_pct DESC").all<D1Row>(),
     db().prepare("SELECT * FROM paper_transactions ORDER BY created_at DESC LIMIT 50").all<D1Row>(),
     db().prepare("SELECT * FROM nav_history ORDER BY valuation_date ASC").all<D1Row>(),
     db().prepare("SELECT * FROM decisions ORDER BY created_at DESC LIMIT 20").all<D1Row>(),
+    db().prepare("SELECT * FROM human_approvals ORDER BY created_at DESC LIMIT 20").all<D1Row>(),
   ]);
   return {
     positions: positions.results.map((row) => ({ ticker: row.ticker, region: row.region, weightPct: Number(row.weight_pct), lastPrice: row.last_price == null ? null : Number(row.last_price) })),
     transactions: transactions.results.map((row) => ({ id: row.id, runId: row.run_id, ticker: row.ticker, region: row.region, oldWeightPct: Number(row.old_weight_pct), newWeightPct: Number(row.new_weight_pct), tradeWeightPct: Number(row.trade_weight_pct), createdAt: row.created_at })),
     nav: nav.results.map((row) => ({ date: row.valuation_date, nav: Number(row.nav), cashWeightPct: Number(row.cash_weight_pct), mode: row.mode, runId: row.run_id })),
     decisions: decisionsRows.results.map((row) => ({ id: row.id, runId: row.run_id, mode: row.mode, stockPct: Number(row.stock_pct), cashPct: Number(row.cash_pct), usSleevePct: Number(row.us_sleeve_pct), chinaSleevePct: Number(row.china_sleeve_pct), riskOpinion: row.risk_opinion, rationale: row.rationale, citations: parseJson(row.citations_json, []), createdAt: row.created_at })),
+    approvals: approvals.results.map((row) => ({ runId: row.run_id, status: row.status, proposal: parseJson(row.proposal_json, {}), decidedBy: row.decided_by, note: row.note, createdAt: row.created_at, updatedAt: row.updated_at })),
   };
 }
 

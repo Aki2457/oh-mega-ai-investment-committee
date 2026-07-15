@@ -10,7 +10,7 @@ export async function GET() {
     return Response.json({
       signalDate: pack.dataAsOf,
       mode: pack.mechanicalMode,
-      stance: pack.mechanicalMode === "Attack" ? "Risk On" : pack.mechanicalMode === "Defense" ? "Risk Off" : "Mixed",
+      stance: pack.mechanicalMode === "Attach" ? "Higher conviction" : "Balanced risk",
       stock: weights.stockPct,
       cash: weights.cashPct,
       reason: `US 200-day trend is ${us.above200d ? "positive" : "negative"}; China/HK 200-day trend is ${china.above200d ? "positive" : "negative"}.`,

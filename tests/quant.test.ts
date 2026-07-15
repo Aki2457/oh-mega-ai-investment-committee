@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateFeatures, convertToUsd, mechanicalMode, tradingDaysBetween } from "../lib/quant";
+import { calculateFeatures, convertToUsd, mechanicalMode, modeWeights, tradingDaysBetween } from "../lib/quant";
 import type { PricePoint } from "../lib/types";
 
 function series(start = 100, days = 260, dailyReturn = 0.001): PricePoint[] {
@@ -29,14 +29,20 @@ test("calculates required weekly market features", () => {
   assert.equal(feature.above200d, true);
 });
 
-test("maps two market trends to three mechanical modes", () => {
+test("maps market trends to the two investable modes", () => {
   const positive = calculateFeatures("A", "US", "USD", series(100, 260, 0.001), series(), "live");
   const negative = calculateFeatures("B", "China/HK", "USD", series(100, 260, -0.001), series(), "live");
-  assert.equal(mechanicalMode(positive, positive), "Attack");
+  assert.equal(mechanicalMode(positive, positive), "Attach");
   assert.equal(mechanicalMode(positive, negative), "Balanced");
-  assert.equal(mechanicalMode(negative, negative), "Defense");
+  assert.equal(mechanicalMode(negative, negative), "Balanced");
 });
 
 test("counts weekdays for stale-data controls", () => {
   assert.equal(tradingDaysBetween("2026-07-03", "2026-07-10"), 5);
+});
+
+test("keeps a cash reserve in every investable mode", () => {
+  assert.deepEqual(modeWeights("Balanced"), { stockPct: 50, cashPct: 50 });
+  assert.deepEqual(modeWeights("Attach"), { stockPct: 75, cashPct: 25 });
+  assert.deepEqual(modeWeights("Lockdown"), { stockPct: 0, cashPct: 100 });
 });

@@ -8,7 +8,7 @@ const encoder = new TextEncoder();
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => ({})) as { sessionId?: string; agent?: AgentKind; profile?: Profile; message?: string };
   const sessionId = payload.sessionId?.trim() || crypto.randomUUID();
-  const agent: AgentKind = ["research", "cio", "risk"].includes(payload.agent ?? "") ? payload.agent! : "research";
+  const agent: AgentKind = ["decision", "risk", "ceo"].includes(payload.agent ?? "") ? payload.agent! : "decision";
   const profile: Profile = "think";
   const message = payload.message?.trim() ?? "";
   if (!message) return Response.json({ error: "message is required" }, { status: 400 });

@@ -8,6 +8,13 @@
       "when": 1783779268301,
       "tag": "0000_motionless_maginty",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784111232956,
+      "tag": "0001_massive_oracle",
+      "breakpoints": true
     }
   ]
 }

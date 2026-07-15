@@ -102,12 +102,11 @@ export function calculateFeatures(
 
 export function mechanicalMode(us: MarketFeatures, china: MarketFeatures): Mode {
   const votes = Number(us.above200d) + Number(china.above200d);
-  return votes === 2 ? "Attack" : votes === 1 ? "Balanced" : "Defense";
+  return votes === 2 ? "Attach" : "Balanced";
 }
 
 export function modeWeights(mode: Mode) {
   if (mode === "Lockdown") return { stockPct: 0, cashPct: 100 };
-  if (mode === "Attack") return { stockPct: 90, cashPct: 10 };
-  if (mode === "Balanced") return { stockPct: 55, cashPct: 45 };
-  return { stockPct: 25, cashPct: 75 };
+  if (mode === "Attach") return { stockPct: 75, cashPct: 25 };
+  return { stockPct: 50, cashPct: 50 };
 }

@@ -51,7 +51,7 @@ export const opinions = sqliteTable("opinions", {
 export const decisions = sqliteTable("decisions", {
   id: text("id").primaryKey(),
   runId: text("run_id").notNull(),
-  mode: text("mode", { enum: ["Attack", "Balanced", "Defense"] }).notNull(),
+  mode: text("mode", { enum: ["Balanced", "Attach", "Lockdown"] }).notNull(),
   stockPct: real("stock_pct").notNull(),
   cashPct: real("cash_pct").notNull(),
   usSleevePct: real("us_sleeve_pct").notNull(),
@@ -118,5 +118,15 @@ export const fundModifications = sqliteTable("fund_modifications", {
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const humanApprovals = sqliteTable("human_approvals", {
+  runId: text("run_id").primaryKey(),
+  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  proposalJson: text("proposal_json").notNull(),
+  decidedBy: text("decided_by"),
+  note: text("note").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

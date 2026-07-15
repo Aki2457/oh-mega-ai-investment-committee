@@ -1,16 +1,17 @@
 import { runCommittee } from "@/lib/committee";
-import type { Profile } from "@/lib/types";
+import type { Mode, Profile } from "@/lib/types";
 
 const encoder = new TextEncoder();
 
 export async function POST(request: Request) {
-  const payload = await request.json().catch(() => ({})) as { trigger?: "manual" | "scheduled"; profile?: Profile; schedulerToken?: string };
+  const payload = await request.json().catch(() => ({})) as { trigger?: "manual" | "scheduled"; profile?: Profile; schedulerToken?: string; requestedMode?: Mode };
   const trigger = payload.trigger === "scheduled" ? "scheduled" : "manual";
   if (trigger === "scheduled") {
     const expected = process.env.COMMITTEE_SCHEDULER_TOKEN;
     if (!expected || payload.schedulerToken !== expected) return Response.json({ error: "Invalid scheduler token" }, { status: 401 });
   }
   const profile: Profile = "think";
+  const requestedMode = (["Balanced", "Attach", "Lockdown"] as string[]).includes(payload.requestedMode ?? "") ? payload.requestedMode : undefined;
   let streamOpen = true;
   const stream = new ReadableStream({
     start(controller) {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(value)}\n\n`)); }
         catch { streamOpen = false; }
       };
-      runCommittee({ trigger, profile, emit: send })
+      runCommittee({ trigger, profile, requestedMode, emit: send })
         .then(() => { if (streamOpen) { streamOpen = false; controller.close(); } })
         .catch((error) => {
           send({ stage: "error", message: error instanceof Error ? error.message : "Committee failed" });

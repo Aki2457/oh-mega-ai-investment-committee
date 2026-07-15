@@ -26,11 +26,10 @@ Usage:
   npm run cli -- portfolio
   npm run cli -- universe
   npm run cli -- run
-  npm run cli -- modify gear <Attack|Balanced|Defense|Lockdown> [note]
-  npm run cli -- modify allocation <0-90> [note]
+  npm run cli -- modify gear <Balanced|Attach|Lockdown> [note]
+  npm run cli -- modify allocation <0-75> [note]
   npm run cli -- modify halt [note]
   npm run cli -- modify buy <ticker> [note]
-  npm run cli -- modify short <ticker> [note]
   npm run cli -- remove-mod <id>
 
 Options: --json
@@ -95,11 +94,11 @@ async function runCommittee() {
 
 async function modify() {
   const kind = (commandArgs.shift() || "").toLowerCase();
-  const map = { gear: "gear", allocation: "stock_allocation", halt: "halt", buy: "buy", short: "short" };
-  if (!map[kind]) throw new Error("Choose gear, allocation, halt, buy, or short");
+  const map = { gear: "gear", allocation: "stock_allocation", halt: "halt", buy: "buy" };
+  if (!map[kind]) throw new Error("Choose gear, allocation, halt, or buy");
   let value = "true"; let ticker = null;
   if (kind === "gear" || kind === "allocation") value = commandArgs.shift() || "";
-  if (kind === "buy" || kind === "short") ticker = (commandArgs.shift() || "").toUpperCase();
+  if (kind === "buy") ticker = (commandArgs.shift() || "").toUpperCase();
   const result = await data("/api/weather", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: map[kind], value, ticker, note: commandArgs.join(" ") }) });
   if (jsonOutput) return output(result);
   console.log(`${paint("32", "Activated")} ${result.modification.type} ${result.modification.ticker || result.modification.value}\nID: ${result.modification.id}`);

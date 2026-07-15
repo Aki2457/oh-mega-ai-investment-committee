@@ -1,16 +1,21 @@
 import {
-  completeRun, createRun, failRun, findRunByWeek, listModifications, rebalancePaper, replaceCommitteeModifications, restartRun, saveCandidates, saveDecision, saveOpinion,
+  completeRun, createRun, failRun, findRunByWeek, listModifications, restartRun, saveCandidates, saveDecision, saveOpinion, savePendingApproval,
 } from "@/db/repository";
 import { buildMarketPack } from "./market-data";
 import { buildProposal, forecastWeek } from "./allocation";
 import { judgeDecision, macroOpinion, profileModels, quantitativeOpinion, riskOpinion } from "./openrouter";
-import type { AnalystOpinion, FinalDecision, MarketFeatures, MarketPack, Profile, RiskOpinion } from "./types";
+import type { AnalystOpinion, FinalDecision, MarketFeatures, MarketPack, Mode, Profile, RiskOpinion } from "./types";
 
 export type CommitteeStage = {
   stage: "starting" | "market-data" | "search" | "opinions" | "risk" | "judge" | "rebalance" | "complete" | "frozen" | "error";
   message: string;
   data?: unknown;
 };
+
+export function mostConservativeMode(...items: Array<Mode | undefined>): Mode {
+  const rank: Record<Mode, number> = { Lockdown: 0, Balanced: 1, Attach: 2 };
+  return items.filter((item): item is Mode => Boolean(item)).sort((left, right) => rank[left] - rank[right])[0] ?? "Balanced";
+}
 
 function frozenDecision(pack: MarketPack): FinalDecision {
   return {
@@ -58,7 +63,7 @@ function fallbackDecision(pack: MarketPack, opinion: AnalystOpinion, reason: str
     usUpProbability: opinion.usUpProbability, chinaUpProbability: opinion.chinaUpProbability,
     usExpectedReturnPct: opinion.usExpectedReturnPct, chinaExpectedReturnPct: opinion.chinaExpectedReturnPct,
     usSleevePct: 50, chinaSleevePct: 50,
-    rationale: `The CIO applied the ${pack.mechanicalMode} mechanical control after AI output validation failed. Hard limits remain active.`,
+    rationale: `The CEO Agent applied the ${pack.mechanicalMode} mechanical control after AI output validation failed. Hard limits remain active.`,
     riskOverrideRationale: reason, analystScores: [], candidates: [], stockViews: opinion.stockViews, citations: [],
   };
 }
@@ -66,12 +71,18 @@ function fallbackDecision(pack: MarketPack, opinion: AnalystOpinion, reason: str
 export async function runCommittee(input: {
   trigger: "manual" | "scheduled";
   profile: Profile;
+  requestedMode?: Mode;
   emit?: (stage: CommitteeStage) => void | Promise<void>;
 }) {
   const profile = input.trigger === "scheduled" ? "pro" : input.profile;
   const week = forecastWeek();
   const existing = await findRunByWeek(week);
   if (existing?.status === "completed" || existing?.status === "frozen") {
+    if (existing.status === "completed") {
+      const existingFinal = existing.final as FinalDecision;
+      const existingProposal = buildProposal(existing.market as MarketPack, existingFinal, { mode: mostConservativeMode(existingFinal.mode, input.requestedMode) });
+      await savePendingApproval(existing.id, existingProposal);
+    }
     await input.emit?.({ stage: "complete", message: "This forecast week was already processed.", data: existing });
     return existing;
   }
@@ -104,8 +115,8 @@ export async function runCommittee(input: {
       return macroOpinion(pack, profile);
     })();
     const [quantResult, macroResult] = await Promise.allSettled([quantPromise, macroPromise]);
-    const quant = quantResult.status === "fulfilled" ? quantResult.value : fallbackOpinion(pack, "Quantitative Analyst", quantResult.reason instanceof Error ? quantResult.reason.message : "AI quantitative output failed validation");
-    const macro = macroResult.status === "fulfilled" ? macroResult.value : fallbackOpinion(pack, "News and Macro Analyst", macroResult.reason instanceof Error ? macroResult.reason.message : "AI macro output failed validation");
+    const quant = quantResult.status === "fulfilled" ? quantResult.value : fallbackOpinion(pack, "Decision Agent, Quantitative", quantResult.reason instanceof Error ? quantResult.reason.message : "AI quantitative output failed validation");
+    const macro = macroResult.status === "fulfilled" ? macroResult.value : fallbackOpinion(pack, "Decision Agent, Web Research", macroResult.reason instanceof Error ? macroResult.reason.message : "AI web research output failed validation");
     const analystOpinions = [quant, ...(macro ? [macro] : [])];
     for (const opinion of analystOpinions) await saveOpinion(runId, opinion.role, opinion.model, opinion);
     await input.emit?.({ stage: "risk", message: "Running the independent Risk challenge." });
@@ -113,23 +124,21 @@ export async function runCommittee(input: {
     try { risk = await riskOpinion(pack, analystOpinions, profile); }
     catch (error) { risk = fallbackRisk(error instanceof Error ? error.message : "AI Risk output failed validation"); }
     await saveOpinion(runId, "Risk Agent", profileModels[profile].risk, risk);
-    await input.emit?.({ stage: "judge", message: "Scoring evidence and making the CIO decision." });
+    await input.emit?.({ stage: "judge", message: "The CEO Agent is scoring evidence and preparing the main recommendation." });
     let final: FinalDecision;
     try { final = await judgeDecision(pack, analystOpinions, risk, profile); }
-    catch (error) { final = fallbackDecision(pack, quant, error instanceof Error ? error.message : "AI CIO output failed validation"); }
+    catch (error) { final = fallbackDecision(pack, quant, error instanceof Error ? error.message : "AI CEO output failed validation"); }
     const manual = (await listModifications(true)).filter((item) => item.source === "manual");
     const gear = manual.find((item) => item.type === "gear")?.value as FinalDecision["mode"] | undefined;
     const allocation = manual.find((item) => item.type === "stock_allocation")?.value;
     const halted = manual.some((item) => item.type === "halt" && item.value !== "false") || gear === "Lockdown";
-    const proposal = buildProposal(pack, final, { mode: gear, stockPct: allocation == null ? undefined : Number(allocation), halted });
+    const proposal = buildProposal(pack, final, { mode: mostConservativeMode(final.mode, input.requestedMode, gear), stockPct: allocation == null ? undefined : Number(allocation), halted });
     await saveCandidates(final.candidates);
     await saveDecision(runId, final, proposal, risk);
-    await input.emit?.({ stage: "rebalance", message: proposal.positions.length ? "Updating the simulated paper portfolio." : "Approved universe is empty. The paper portfolio remains in cash." });
-    await rebalancePaper(runId, proposal);
-    await replaceCommitteeModifications(proposal.mode, proposal.stockPct, final.rationale);
+    await input.emit?.({ stage: "rebalance", message: proposal.positions.length ? "Preparing the paper allocation for Human approval." : "Approved universe is empty. The proposal remains fully in cash." });
     await completeRun(runId, pack, final);
     const result = { id: runId, forecastWeek: week, status: "completed", profile, market: pack, opinions: analystOpinions, risk, final, proposal };
-    await input.emit?.({ stage: "complete", message: "Committee decision and paper allocation completed.", data: result });
+    await input.emit?.({ stage: "complete", message: "CEO recommendation completed. Human approval is required before the paper portfolio changes.", data: result });
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Committee run failed";
